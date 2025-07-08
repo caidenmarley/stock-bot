@@ -1,0 +1,26 @@
+# Ignore build artifacts
+/build/
+/CMakeFiles/
+/Makefile
+/CMakeCache.txt
+/*.cmake
+
+# Ignore editor files
+*.swp
+*.swo
+*.vscode
+.idea
+
+# Ignore OS files
+.DS_Store
+
+# Ignore binaries
+*.o
+*.out
+*.a
+*.so
+*.exe
+stock_bot
+
+# Ignore logs
+*.log
