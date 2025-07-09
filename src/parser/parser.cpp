@@ -1,4 +1,7 @@
 #include "parser/parser.h"
+#include <chrono>
+#include <fstream>
+#include <iostream>
 
 // Constructor: Loads and parses the CSV file while timing the operation.
 CSVLoader::CSVLoader(const std::string& filename) {
@@ -22,23 +25,18 @@ void CSVLoader::readFile(const std::string& filename) {
     // open file in binary with the pointer straight to the end of the file
     std::ifstream file(filename, std::ios::binary | std::ios::ate);
 
-    if (!file.is_open()) {
-        std::cerr << "Failed to open file: " << filename << "\n";
-        std::exit(1);
+    if (!file.is_open()){
+        throw std::runtime_error("Failed to open file: " + filename);
     }
 
     std::streamsize size = file.tellg(); // get file size (pointer is at end)
     file.seekg(0, std::ios::beg);        // reset to beginning
 
-    // allocate buffer with file size
-    buffer.resize(size + 1); // +1 for null terminator.
+    buffer.resize(size); // allocate buffer with file size
 
     if (!file.read(buffer.data(), size)) {
-        std::cerr << "Failed to read file.\n";
-        std::exit(1);
+        throw std::runtime_error("Failed to read file: " + filename);
     }
-
-    buffer[size] = '\0'; // null term
 
     file.close();
 }
@@ -59,7 +57,7 @@ void CSVLoader::parseBuffer() {
     }
 
     // preallocate large chunk to avoid repeated reallocations
-    data.reserve(DATASET_SIZE); // change if you know expected row count.
+    data.reserve(DATASET_SIZE); // TODO change if you know expected row count.
 
     while (ptr < end) {
         PriceData row {};
@@ -68,51 +66,22 @@ void CSVLoader::parseBuffer() {
         char* fieldStart = ptr;
 
         // moves ptr forward until it finds comma or newline
-        while (*ptr != ',' && *ptr != '\n' && ptr < end) {
+        while (ptr < end && *ptr != ',' && *ptr != '\n') {
             ++ptr;
         }
         // creates string view of the date
         row.date = std::string_view(fieldStart, ptr - fieldStart);
 
-        // inline parsing macro to avoid repetitive code and function calls on stack
-#define NEXT_FIELD_DOUBLE(dest)                                       \
-    if (*ptr == ',') ++ptr;                                           \
-    {                                                                 \
-        char* fieldStart = ptr;                                       \
-        while (*ptr != ',' && *ptr != '\n' && ptr < end)              \
-            ++ptr;                                                    \
-        /* conv string into num type without copying or allocating */ \
-        auto res = std::from_chars(fieldStart, ptr, dest);            \
-        if (res.ec != std::errc()) {                                  \
-            dest = 0.0; /* fallback value if error */                 \
-        }                                                             \
-    }
-
-#define NEXT_FIELD_UINT(dest)                              \
-    if (*ptr == ',') ++ptr;                                \
-    {                                                      \
-        char* fieldStart = ptr;                            \
-        while (*ptr != ',' && *ptr != '\n' && ptr < end)   \
-            ++ptr;                                         \
-        auto res = std::from_chars(fieldStart, ptr, dest); \
-        if (res.ec != std::errc()) {                       \
-            dest = 0; /* fallback value if error */        \
-        }                                                  \
-    }
-
-        NEXT_FIELD_DOUBLE(row.open);
-        NEXT_FIELD_DOUBLE(row.high);
-        NEXT_FIELD_DOUBLE(row.low);
-        NEXT_FIELD_DOUBLE(row.close);
-        NEXT_FIELD_DOUBLE(row.adjClose);
-        NEXT_FIELD_UINT(row.volume);
-
-        // remove macro definitions
-#undef NEXT_FIELD_DOUBLE
-#undef NEXT_FIELD_UINT
+        parseNext(ptr, end, row.open);
+        parseNext(ptr, end, row.high);
+        parseNext(ptr, end, row.low);
+        parseNext(ptr, end, row.close);
+        parseNext(ptr, end, row.adjClose);
+        parseNext(ptr, end, row.volume);
+       
 
         // move to next line
-        while (*ptr != '\n' && ptr < end) {
+        while (ptr < end && *ptr != '\n') {
             ++ptr;
         }
 
@@ -124,5 +93,6 @@ void CSVLoader::parseBuffer() {
         data.push_back(row);
     }
 
+    //TODO not sure if needed
     data.shrink_to_fit(); // reclaim any over used memory
 }
