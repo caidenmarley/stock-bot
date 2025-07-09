@@ -1,4 +1,5 @@
 #include "parser/parser.h"
+#include <iostream>
 
 int main() {
     CSVLoader loader("data/AAAU.csv");
