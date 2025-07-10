@@ -20,10 +20,6 @@ file(GLOB_RECURSE SRC_FILES
     src/*.cpp
 )
 
-file(GLOB_RECURSE TEST_FILES
-    tests/*.cpp
-)
-
 # Create main executable
 add_executable(stock_bot main.cpp ${SRC_FILES})
 
