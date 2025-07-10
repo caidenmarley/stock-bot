@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 
-// Constructor: Loads and parses the CSV file while timing the operation.
+// Loads and parses the CSV file while timing
 CSVLoader::CSVLoader(const std::string& filename) {
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -25,7 +25,7 @@ void CSVLoader::readFile(const std::string& filename) {
     // open file in binary with the pointer straight to the end of the file
     std::ifstream file(filename, std::ios::binary | std::ios::ate);
 
-    if (!file.is_open()){
+    if (!file.is_open()) {
         throw std::runtime_error("Failed to open file: " + filename);
     }
 
@@ -78,7 +78,6 @@ void CSVLoader::parseBuffer() {
         parseNext(ptr, end, row.close);
         parseNext(ptr, end, row.adjClose);
         parseNext(ptr, end, row.volume);
-       
 
         // move to next line
         while (ptr < end && *ptr != '\n') {
@@ -93,6 +92,6 @@ void CSVLoader::parseBuffer() {
         data.push_back(row);
     }
 
-    //TODO not sure if needed
+    // TODO not sure if needed
     data.shrink_to_fit(); // reclaim any over used memory
 }

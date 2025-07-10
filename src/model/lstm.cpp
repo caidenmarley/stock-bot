@@ -1,21 +1,21 @@
 #include "model/lstm.h"
 #include <random>
 
-LSTMCell::LSTMCell(int numFeatures, int hiddenSize) 
-: numFeatures(numFeatures), hiddenSize(hiddenSize), 
-  cellState(Eigen::VectorXd::Zero(hiddenSize)), hiddenState(Eigen::VectorXd::Zero(hiddenSize)),
-  Wf(hiddenSize, numFeatures), Uf(hiddenSize, hiddenSize), bf(Eigen::VectorXd::Constant(hiddenSize, 1.0)), // set to 1 so lstm doesnt forget at the start
-  Wi(hiddenSize, numFeatures), Ui(hiddenSize, hiddenSize), bi(Eigen::VectorXd::Zero(hiddenSize)), 
-  Wo(hiddenSize, numFeatures), Uo(hiddenSize, hiddenSize), bo(Eigen::VectorXd::Zero(hiddenSize)),
-  Wc(hiddenSize, numFeatures), Uc(hiddenSize, hiddenSize), bc(Eigen::VectorXd::Zero(hiddenSize)){
+LSTMCell::LSTMCell(int numFeatures, int hiddenSize)
+    : numFeatures(numFeatures), hiddenSize(hiddenSize),
+      cellState(Eigen::VectorXd::Zero(hiddenSize)), hiddenState(Eigen::VectorXd::Zero(hiddenSize)),
+      Wf(hiddenSize, numFeatures), Uf(hiddenSize, hiddenSize), bf(Eigen::VectorXd::Constant(hiddenSize, 1.0)), // set to 1 so lstm doesnt forget at the start
+      Wi(hiddenSize, numFeatures), Ui(hiddenSize, hiddenSize), bi(Eigen::VectorXd::Zero(hiddenSize)),
+      Wo(hiddenSize, numFeatures), Uo(hiddenSize, hiddenSize), bo(Eigen::VectorXd::Zero(hiddenSize)),
+      Wc(hiddenSize, numFeatures), Uc(hiddenSize, hiddenSize), bc(Eigen::VectorXd::Zero(hiddenSize)) {
     xavierWeightsInit();
 }
 
 // For each weight draw a rngom value from a normal distribution with mean 0 and
 // standard deviation = sqrt(2/(numInputs + numOutputs))
-void LSTMCell::xavierWeightsInit(){
+void LSTMCell::xavierWeightsInit() {
     // static prevents reinitialsing mt19937 again (expensive time cost)
-    static std::mt19937 rng(std::random_device{}()); 
+    static std::mt19937 rng(std::random_device {}());
 
     double stdDevInput = sqrt(2.0 / (static_cast<double>(numFeatures) + static_cast<double>(hiddenSize)));
     double stdDevHidden = sqrt(2.0 / (static_cast<double>(hiddenSize) + static_cast<double>(hiddenSize)));
