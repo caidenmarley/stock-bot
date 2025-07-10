@@ -15,6 +15,7 @@ public:
     // - rawData: full PriceData from parser (length = numDays)
     // - numTimesteps: how many days each sequence covers
     // - batchSize: how many sequences per training batch
+    // - feeds "batchSize" sequences each with "numTimesteps" days into model
     StockData(const std::vector<PriceData>& rawData,
               size_t numTimestepsInp,
               size_t batchSizeInp)
