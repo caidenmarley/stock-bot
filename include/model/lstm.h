@@ -3,18 +3,19 @@
 #include <cmath>
 #include <random>
 
-class LSTMCell{
-public:
+class LSTMCell {
+  public:
     LSTMCell(int numFeatures, int hiddenSize);
     void xavierWeightsInit();
-    inline void initWeights(Eigen::MatrixXd &W, std::mt19937 &rng, std::normal_distribution<double> &dist){
+    inline void initWeights(Eigen::MatrixXd& W, std::mt19937& rng, std::normal_distribution<double>& dist) {
         for (int i = 0; i < W.rows(); ++i) {
             for (int j = 0; j < W.cols(); ++j) {
                 W(i, j) = dist(rng);
             }
-        }       
+        }
     }
-private:
+
+  private:
     int numFeatures;
     int hiddenSize;
 

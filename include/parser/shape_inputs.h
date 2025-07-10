@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vector>
-#include <stdexcept>
 #include <algorithm>
+#include <stdexcept>
+#include <vector>
 
 #include "parser/parser.h"
 #include <Eigen/Dense>
@@ -10,20 +10,17 @@
 
 // prepares raw PriceData into tensors for LSTM training
 class StockData {
-public:
+  public:
     // builds the full dataset:
     // - rawData: full PriceData from parser (length = numDays)
     // - numTimesteps: how many days each sequence covers
     // - batchSize: how many sequences per training batch
     // - feeds "batchSize" sequences each with "numTimesteps" days into model
-    StockData(const std::vector<PriceData>& rawData,
-              size_t numTimestepsInp,
-              size_t batchSizeInp)
+    StockData(const std::vector<PriceData>& rawData, size_t numTimestepsInp, size_t batchSizeInp)
         : numTimesteps(numTimestepsInp),
           numFeatures(6),
           batchSize(batchSizeInp),
-          positionIndex(0)
-    {
+          positionIndex(0) {
         // Number of days available
         const size_t numDays = rawData.size();
         if (numDays < numTimesteps + 1) { // You need at least 1 day to compare with models predictions
@@ -44,7 +41,7 @@ public:
         }
 
         // inputs: shape [numSequences][numTimesteps][numFeatures]
-        inputs = Eigen::Tensor<double,3, Eigen::RowMajor>(
+        inputs = Eigen::Tensor<double, 3, Eigen::RowMajor>(
             // Eigen expects <long>
             static_cast<long>(numSequences),
             static_cast<long>(numTimesteps),
@@ -69,12 +66,12 @@ public:
                 }
             }
             // Compute the target: next-day return = (close[t+1] - close[t]) / close[t]
-            size_t lastDay = seq + numTimesteps - 1; // last day in window
-            double closeT   = rawData[lastDay].close; // close on last day
+            size_t lastDay = seq + numTimesteps - 1;      // last day in window
+            double closeT = rawData[lastDay].close;       // close on last day
             double closeTp1 = rawData[lastDay + 1].close; // close on day after last day
 
             // this is the % next day return value the model will try to predict
-            targets(static_cast<long>(seq)) = (closeTp1 - closeT) / closeT; 
+            targets(static_cast<long>(seq)) = (closeTp1 - closeT) / closeT;
         }
     }
 
@@ -86,7 +83,7 @@ public:
     // Returns the next batch as zero-copy tensor slices:
     // - first: [currentBatch, numTimesteps, numFeatures], inputs
     // - second: [currentBatch], targets with length currentBatch
-    std::pair<Eigen::Tensor<double,3, Eigen::RowMajor>,Eigen::VectorXd> nextBatch() {
+    std::pair<Eigen::Tensor<double, 3, Eigen::RowMajor>, Eigen::VectorXd> nextBatch() {
         if (!hasAnotherBatch()) {
             throw std::out_of_range("No more batches; call reset() to start a new epoch");
         }
@@ -100,7 +97,7 @@ public:
         double* dataPtr = inputs.data() + start * numTimesteps * numFeatures;
 
         // treat existing memory as tensor without copying
-        Eigen::TensorMap<Eigen::Tensor<double,3, Eigen::RowMajor>> inputBatch(
+        Eigen::TensorMap<Eigen::Tensor<double, 3, Eigen::RowMajor>> inputBatch(
             dataPtr,
             static_cast<long>(currentBatch),
             static_cast<long>(numTimesteps),
@@ -120,15 +117,15 @@ public:
         positionIndex = 0;
     }
 
-private:
-    size_t numTimesteps;          // days per sequence window
-    size_t numFeatures;           // feature count per day (6)
-    size_t batchSize;             // sequences per batch
-    size_t numSequences;    // total sliding window sequences
-    size_t positionIndex;                 // how many sequences have been served
+  private:
+    size_t numTimesteps;  // days per sequence window
+    size_t numFeatures;   // feature count per day (6)
+    size_t batchSize;     // sequences per batch
+    size_t numSequences;  // total sliding window sequences
+    size_t positionIndex; // how many sequences have been served
 
-    Eigen::Tensor<double,3, Eigen::RowMajor> inputs;  // [numSequences][numTimesteps][numFeatures]
-    Eigen::VectorXd         targets; // [numSequences]
+    Eigen::Tensor<double, 3, Eigen::RowMajor> inputs; // [numSequences][numTimesteps][numFeatures]
+    Eigen::VectorXd targets;                          // [numSequences]
 
     // extract raw PriceData into array of numFeatures doubles
     static void priceToFeatures(const PriceData& p, double* out) {
@@ -141,4 +138,3 @@ private:
         out[5] = static_cast<double>(p.volume);
     }
 };
-

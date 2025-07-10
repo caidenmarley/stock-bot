@@ -1,9 +1,9 @@
 #pragma once
 
 #include <charconv>
+#include <stdexcept>
 #include <string_view>
 #include <vector>
-#include <stdexcept>
 
 #define DATASET_SIZE 1000000
 
@@ -27,18 +27,19 @@ class CSVLoader {
 
     void readFile(const std::string& filename); // load file to memory
     void parseBuffer();                         // // parse the buffer into structs
-    template<typename T>
+    template <typename T>
     static inline void parseNext(char*& ptr, char* end, T& dest) {
-        if (ptr >= end){
-          throw std::runtime_error("Unexpected end of buffer");
-        } 
+        if (ptr >= end) {
+            throw std::runtime_error("Unexpected end of buffer");
+        }
         if (*ptr == ',') ++ptr;
         char* start = ptr;
-        while (ptr < end && *ptr != ',' && *ptr != '\n') ++ptr;
+        while (ptr < end && *ptr != ',' && *ptr != '\n')
+            ++ptr;
         // conv string into num type without copying or allocating
         auto res = std::from_chars(start, ptr, dest);
         if (res.ec != std::errc()) {
-            dest = T{}; // fallback zero
+            dest = T {}; // fallback zero
         }
     }
 };
