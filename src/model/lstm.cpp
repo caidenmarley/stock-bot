@@ -88,13 +88,50 @@ Eigen::VectorXd LSTMCell::forwardPass(const Eigen::VectorXd& input) {
 	stepDataS.f = forgetGateOutput;
 	stepDataS.i = inputGateOutput;
 	stepDataS.o = outputGateOutput;
-	stepDataS.c_tilde = cellInput;
+	stepDataS.cTilde = cellInput;
 	stepDataS.c = this->cellState;
 	this->stepData.push_back(stepDataS);
 
 	return this->hiddenState;
 }
 
+// delta_h = dL/dh_t
+// delta_c = dL/dc_t
+// deltaX = dL/dx - how a change in X affects the Loss
+// returns pair dh_t-1 and dc_t-1
 std::pair<Eigen::VectorXd,Eigen::VectorXd> LSTMCell::backwardPass(const Eigen::VectorXd& deltaH, const Eigen::VectorXd& deltaC){
+	const StepData& stepDataS = this->stepData.back();
 
+	// recompute tanh(c_t) as last forward step was h_t = o_t cwiseProd tanh(c_t)
+	Eigen::VectorXd tanhC = stepDataS.c.array().tanh().matrix();
+
+	// dh_t/do_t = tanh(c_t) [chain rule from h_t = o_t * tanh(c_t)]
+	// dL/do = dL/dh * dh/do = dh x tanh(c)
+	Eigen::VectorXd deltaO = deltaH.array() * tanhC.array();
+
+	// because h_t uses c_t, during bptt any loss in h_t ripples back into c_t
+	// so dh_t/dc_t is needed from h_t = o_t cwiseProd tanh(c_t)
+	// dh_t/dc_t = o_t * (1 - tanh^2(c_t))
+	// dL/dc (through h) = dL/dh * dh_t/dc_t
+	Eigen::VectorXd deltaCThroughH = (deltaH.array() * stepDataS.o.array() * (1.0 - tanhC.array().square())).matrix();
+
+	// gradients into c come from both nexts time steps deltaC and through hidden state
+	Eigen::VectorXd deltaCTotal = deltaC + deltaCThroughH;
+
+	// next step backwards was c_t = (f_t cwiseP c_t-1) + (i_t cwiseP c~_t)
+	// dc_t/df_t = c_t-1
+	// dL/df = dc_t * c_t-1
+	Eigen::VectorXd deltaF = (deltaCTotal.array() * stepDataS.prevCellState.array()).matrix();
+
+	// dc_t/di_t = c~_t
+	// dL/di = dc_t * c~_t
+	Eigen::VectorXd deltaI = (deltaCTotal.array() * stepDataS.cTilde.array()).matrix();
+
+	// dc_t/dc~_t = i_t
+	// dL/dc~ = dc_t * i_t
+	Eigen::VectorXd deltaCTilde = (deltaCTotal.array() * stepDataS.i.array()).matrix();
+
+	// dc_t/dc_t-1 = f_t
+	// dL/dc_t-1 = dc_t * f_t
+	Eigen::VectorXd deltaCPrev = (deltaCTotal.array() * stepDataS.f.array()).matrix();
 }

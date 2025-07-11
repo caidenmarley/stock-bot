@@ -57,7 +57,7 @@ class LSTMCell {
       Eigen::VectorXd input;
       Eigen::VectorXd prevHiddenState, prevCellState;
       Eigen::VectorXd f, i, o; // gate outputs
-      Eigen::VectorXd c_tilde; // c~ output
+      Eigen::VectorXd cTilde; // c~ output
       Eigen::VectorXd c; // new cell state
     };
 
