@@ -8,7 +8,7 @@ LSTMCell::LSTMCell(int numFeatures, int hiddenSize)
       Wo(hiddenSize, numFeatures), Uo(hiddenSize, hiddenSize), bo(Eigen::VectorXd::Zero(hiddenSize)),
       Wc(hiddenSize, numFeatures), Uc(hiddenSize, hiddenSize), bc(Eigen::VectorXd::Zero(hiddenSize)),
       cellState(Eigen::VectorXd::Zero(hiddenSize)), hiddenState(Eigen::VectorXd::Zero(hiddenSize)),
-	        // zero‐initialize all gradient accumulators
+	        // zero initialize all gradient mat/vecs
       dWf(Eigen::MatrixXd::Zero(hiddenSize, numFeatures)),
       dUf(Eigen::MatrixXd::Zero(hiddenSize, hiddenSize)),
       dbf(Eigen::VectorXd::Zero(hiddenSize)),
