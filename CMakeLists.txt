@@ -23,10 +23,7 @@ file(GLOB_RECURSE SRC_FILES
 # Create main executable
 add_executable(stock_bot main.cpp ${SRC_FILES})
 
-# find_package(CURL REQUIRED)
-# target_link_libraries(stock_predictor PRIVATE CURL::libcurl)
 
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
-set(EIGEN_USE_GPU OFF)  # if cpu only
 include_directories(${EIGEN3_INCLUDE_DIR})
 

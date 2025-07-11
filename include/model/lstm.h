@@ -1,6 +1,5 @@
 #pragma once
 #include <Eigen/Dense>
-#include <cmath>
 #include <random>
 
 class LSTMCell {
@@ -14,6 +13,10 @@ class LSTMCell {
             }
         }
     }
+    Eigen::VectorXd forwardPass(const Eigen::VectorXd& input);
+
+    static auto inline sigmoid = [](double val){return 1.0/(1.0 + std::exp(-val));};
+    static auto inline tanhLambda = [](double val){return std::tanh(val);};
 
   private:
     int numFeatures;
