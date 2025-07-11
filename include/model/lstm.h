@@ -1,6 +1,8 @@
 #pragma once
 #include <Eigen/Dense>
 #include <random>
+#include <vector>
+#include <utility>
 
 class LSTMCell {
   public:
@@ -18,12 +20,13 @@ class LSTMCell {
     static auto inline tanhLambda = [](double val){return std::tanh(val);};
 
     Eigen::VectorXd forwardPass(const Eigen::VectorXd& input);
-    void backwardPass();
+    std::pair<Eigen::VectorXd,Eigen::VectorXd> backwardPass(const Eigen::VectorXd& deltaH, const Eigen::VectorXd& deltaC);
 
   private:
     int numFeatures;
     int hiddenSize;
 
+    // Forward vars
     // Forget weight(Wf), hidden forget weight(Uf), forget bias(bf)
     // forget gate output vector(Ft) = sigmoid(Wf*inputVec + Uf*PrevHiddenStateVec + bf)
     Eigen::MatrixXd Wf, Uf;
@@ -47,4 +50,34 @@ class LSTMCell {
     // cell state vector = (Ft Hadamard product previous cell state vector) + (It Hadarmard product Ct)
     // hidden state vector = Ot Hadamard product tanh(cell state vector)
     Eigen::VectorXd cellState, hiddenState;
+
+    // Backward vars
+    // Struct for data for each time step
+    struct StepData{
+      Eigen::VectorXd input;
+      Eigen::VectorXd prevHiddenState, prevCellState;
+      Eigen::VectorXd f, i, o; // gate outputs
+      Eigen::VectorXd c_tilde; // c~ output
+      Eigen::VectorXd c; // new cell state
+    };
+
+    std::vector<StepData> stepData;
+
+    // Gradients
+    // forget gate
+    Eigen::MatrixXd dWf, dUf;
+    Eigen::VectorXd dbf;
+
+    // input gate
+    Eigen::MatrixXd dWi, dUi;
+    Eigen::VectorXd dbi;
+
+    // c~
+    Eigen::MatrixXd dWc, dUc;
+    Eigen::VectorXd dbc;
+
+    // output gate
+    Eigen::MatrixXd dWo, dUo;
+    Eigen::VectorXd dbo;
+
 };
