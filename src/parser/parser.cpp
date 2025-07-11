@@ -46,6 +46,8 @@ void CSVLoader::parseBuffer() {
     char* ptr = buffer.data();                 // ptr to start of buffer
     char* end = buffer.data() + buffer.size(); // ptr to end of buffer
 
+
+    /*THIS COULD BE DONE WITH std::memchr or std::find*/
     // skip header
     while (ptr < end && *ptr != '\n') {
         ++ptr;
