@@ -13,10 +13,12 @@ class LSTMCell {
             }
         }
     }
-    Eigen::VectorXd forwardPass(const Eigen::VectorXd& input);
 
     static auto inline sigmoid = [](double val){return 1.0/(1.0 + std::exp(-val));};
     static auto inline tanhLambda = [](double val){return std::tanh(val);};
+
+    Eigen::VectorXd forwardPass(const Eigen::VectorXd& input);
+    void backwardPass();
 
   private:
     int numFeatures;

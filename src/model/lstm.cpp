@@ -42,15 +42,15 @@ Eigen::VectorXd LSTMCell::forwardPass(const Eigen::VectorXd& input) {
 	Eigen::VectorXd inputGateOutput = this->Wi*input + this->Ui*this->hiddenState + this->bi;
 	inputGateOutput = inputGateOutput.unaryExpr(this->sigmoid);
 
-	// output gate
-	// output gate output vector(Ot) = sigmoid(Wo*inputVec + Uo*PrevHiddenStateVec + bo)
-	Eigen::VectorXd outputGateOutput = this->Wo*input + this->Uo*this->hiddenState + this->bo;
-	outputGateOutput = outputGateOutput.unaryExpr(this->sigmoid);
-
 	// cell input
 	// cell input vector(Ct) = tanh(Wc*inputVec + Uc*PrevHiddenStateVec + bc)
 	Eigen::VectorXd cellInput = this->Wc*input + this->Uc*this->hiddenState + this->bc;
 	cellInput = cellInput.unaryExpr(this->tanhLambda);
+
+	// output gate
+	// output gate output vector(Ot) = sigmoid(Wo*inputVec + Uo*PrevHiddenStateVec + bo)
+	Eigen::VectorXd outputGateOutput = this->Wo*input + this->Uo*this->hiddenState + this->bo;
+	outputGateOutput = outputGateOutput.unaryExpr(this->sigmoid);
 
 	// cell state vector = (Ft Hadamard product previous cell state vector) + (It Hadarmard product Ct)
 	// use eigen array api to conv to array and do element wise multiplication (better optimisation for complier)
@@ -60,4 +60,8 @@ Eigen::VectorXd LSTMCell::forwardPass(const Eigen::VectorXd& input) {
 	this->hiddenState = (outputGateOutput.array()*this->cellState.array().tanh()).matrix();
 
 	return this->hiddenState;
+}
+
+void LSTMCell::backwardPass(){
+	
 }
