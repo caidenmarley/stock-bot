@@ -1,8 +1,8 @@
 #pragma once
 #include <Eigen/Dense>
 #include <random>
-#include <vector>
 #include <utility>
+#include <vector>
 
 class LSTMCell {
   public:
@@ -16,11 +16,11 @@ class LSTMCell {
         }
     }
 
-    static auto inline sigmoid = [](double val){return 1.0/(1.0 + std::exp(-val));};
-    static auto inline tanhLambda = [](double val){return std::tanh(val);};
+    static auto inline sigmoid = [](double val) { return 1.0 / (1.0 + std::exp(-val)); };
+    static auto inline tanhLambda = [](double val) { return std::tanh(val); };
 
     Eigen::VectorXd forwardPass(const Eigen::VectorXd& input);
-    std::pair<Eigen::VectorXd,Eigen::VectorXd> backwardPass(const Eigen::VectorXd& deltaH, const Eigen::VectorXd& deltaC);
+    std::pair<Eigen::VectorXd, Eigen::VectorXd> backwardPass(const Eigen::VectorXd& deltaH, const Eigen::VectorXd& deltaC);
 
   private:
     int numFeatures;
@@ -53,31 +53,30 @@ class LSTMCell {
 
     // Backward vars
     // Struct for data for each time step
-    struct StepData{
-      Eigen::VectorXd input;
-      Eigen::VectorXd prevHiddenState, prevCellState;
-      Eigen::VectorXd f, i, o; // gate outputs
-      Eigen::VectorXd cTilde; // c~ output
-      Eigen::VectorXd c; // new cell state
+    struct StepData {
+        Eigen::VectorXd input;
+        Eigen::VectorXd prevHiddenState, prevCellState;
+        Eigen::VectorXd f, i, o; // gate outputs
+        Eigen::VectorXd cTilde;  // c~ output
+        Eigen::VectorXd c;       // new cell state
     };
 
     std::vector<StepData> stepData;
 
     // Gradients
     // forget gate
-    Eigen::MatrixXd dWf, dUf;
-    Eigen::VectorXd dbf;
+    Eigen::MatrixXd deltaWf, deltaUf;
+    Eigen::VectorXd deltaBf;
 
     // input gate
-    Eigen::MatrixXd dWi, dUi;
-    Eigen::VectorXd dbi;
+    Eigen::MatrixXd deltaWi, deltaUi;
+    Eigen::VectorXd deltaBi;
 
     // c~
-    Eigen::MatrixXd dWc, dUc;
-    Eigen::VectorXd dbc;
+    Eigen::MatrixXd deltaWc, deltaUc;
+    Eigen::VectorXd deltaBc;
 
     // output gate
-    Eigen::MatrixXd dWo, dUo;
-    Eigen::VectorXd dbo;
-
+    Eigen::MatrixXd deltaWo, deltaUo;
+    Eigen::VectorXd deltaBo;
 };
