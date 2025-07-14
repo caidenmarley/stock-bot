@@ -188,7 +188,6 @@ std::pair<Eigen::VectorXd, Eigen::VectorXd> LSTMCell::backwardPass(const Eigen::
     // deltaHPrev for return value
     // dL/d_hPrev = sum (dL/d(f/i/o/c~)PreFunc x d(f/i/o/c))/d_hPrev
     // d(f/i/o/c))/d_hPrev = U(f/i/o/c) so need to tranpose for same reason as before
-    // clang-format off
     Eigen::VectorXd deltaHPrev =
         this->Uf.transpose() * deltaFPreFunc +
         this->Ui.transpose() * deltaIPreFunc +
