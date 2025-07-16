@@ -199,3 +199,28 @@ std::pair<Eigen::VectorXd, Eigen::VectorXd> LSTMCell::backwardPass(const Eigen::
         deltaHPrev, deltaCPrev
     };
 }
+
+int LSTMCell::getParameterCount(){
+    size_t count{};
+    count += Wf.size();
+    count += Wi.size();
+    count += Wo.size();
+    count += Wc.size();
+
+    count += Uf.size();
+    count += Ui.size();
+    count += Uo.size();
+    count += Uc.size();
+
+    count += bf.size();
+    count += bi.size();
+    count += bo.size();
+    count += bc.size();
+    return count;
+}
+
+void LSTMCell::reset(){
+    this->hiddenState.setZero();
+    this->cellState.setZero();
+    this->stepData.clear();
+}

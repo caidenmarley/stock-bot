@@ -22,6 +22,18 @@ class LSTMCell {
     Eigen::VectorXd forwardPass(const Eigen::VectorXd& input);
     std::pair<Eigen::VectorXd, Eigen::VectorXd> backwardPass(const Eigen::VectorXd& deltaH, const Eigen::VectorXd& deltaC);
 
+    int getParameterCount();    // get total num of elements in weights and biases
+
+    void reset();   // clear stepdata and clear hidden and cell state
+
+    Eigen::VectorXd getHiddenState(){
+        return this->hiddenState;
+    }
+
+    Eigen::VectorXd getCellState(){
+        return this->cellState;
+    }
+
   private:
     int numFeatures;
     int hiddenSize;
