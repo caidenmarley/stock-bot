@@ -1,5 +1,8 @@
 #include "parser/parser.h"
 #include "parser/shape_inputs.h"
+#include "model/lstm.h"
+#include "model/ada_belief.h"
+#include "model/huber_loss_function.h"
 #include <iostream>
 
 int main() {
