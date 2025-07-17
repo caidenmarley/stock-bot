@@ -9,5 +9,6 @@ public:
     Eigen::VectorXd backward();
 private:
     double delta;
-    Eigen::VectorXd residuals; // target - prediction
+    double halfDelta;
+    Eigen::ArrayXd residuals; // target - prediction
 };
