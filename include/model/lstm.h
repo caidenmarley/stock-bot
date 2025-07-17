@@ -6,7 +6,7 @@
 
 class LSTMCell {
   public:
-    LSTMCell(int numFeatures, int hiddenSize);
+    LSTMCell(int numFeatures, int hiddenSize, int sequenceLength);
     void xavierWeightsInit();
     inline void initWeights(Eigen::MatrixXd& W, std::mt19937& rng, std::normal_distribution<double>& dist) {
         for (int i = 0; i < W.rows(); ++i) {
@@ -26,13 +26,17 @@ class LSTMCell {
 
     void reset();   // clear stepdata and clear hidden and cell state
 
-    Eigen::VectorXd getHiddenState(){
-        return this->hiddenState;
-    }
+    Eigen::VectorXd getHiddenState(){return this->hiddenState;}
 
-    Eigen::VectorXd getCellState(){
-        return this->cellState;
-    }
+    Eigen::VectorXd getCellState(){return this->cellState;}
+
+    Eigen::VectorXd getParametersVector();
+
+    Eigen::VectorXd getGradientsVector();
+
+    void setParametersVector(const Eigen::VectorXd& v);
+
+    void zeroGrad();
 
   private:
     int numFeatures;

@@ -1,7 +1,7 @@
 #include "model/lstm.h"
 #include <cmath>
 
-LSTMCell::LSTMCell(int numFeatures, int hiddenSize)
+LSTMCell::LSTMCell(int numFeatures, int hiddenSize, int sequenceLength)
     : numFeatures(numFeatures), hiddenSize(hiddenSize),
       Wf(hiddenSize, numFeatures), Uf(hiddenSize, hiddenSize), bf(Eigen::VectorXd::Constant(hiddenSize, 1.0)), // set to 1 so lstm doesnt forget at the start
       Wi(hiddenSize, numFeatures), Ui(hiddenSize, hiddenSize), bi(Eigen::VectorXd::Zero(hiddenSize)),
@@ -26,7 +26,7 @@ LSTMCell::LSTMCell(int numFeatures, int hiddenSize)
       deltaBo(Eigen::VectorXd::Zero(hiddenSize)) {
     xavierWeightsInit();
 
-    // stepData.reserve(SOMETHING) TODO
+    stepData.reserve(sequenceLength);
 }
 
 // For each weight draw a rngom value from a normal distribution with mean 0 and
@@ -55,22 +55,35 @@ Eigen::VectorXd LSTMCell::forwardPass(const Eigen::VectorXd& input) {
 
     // forget gate
     // forget gate output vector(Ft) = sigmoid(Wf*inputVec + Uf*PrevHiddenStateVec + bf)
-    Eigen::VectorXd forgetGateOutput = this->Wf * input + this->Uf * prevHidden + this->bf;
+    Eigen::VectorXd forgetGateOutput(hiddenSize);
+    // uses noalias to prevent unnecessary tempory vectors being allocated
+    forgetGateOutput.noalias() = this->Wf * input;
+    forgetGateOutput.noalias() += this->Uf * prevHidden;
+    forgetGateOutput += this->bf;
     forgetGateOutput = forgetGateOutput.unaryExpr(this->sigmoid);
 
     // input gate
     // input gate output vector(It) = sigmoid(Wi*inputVec + Ui*PrevHiddenStateVec + bi)
-    Eigen::VectorXd inputGateOutput = this->Wi * input + this->Ui * prevHidden + this->bi;
+    Eigen::VectorXd inputGateOutput(hiddenSize); 
+    inputGateOutput.noalias() = this->Wi * input;
+    inputGateOutput.noalias() += this->Ui * prevHidden;
+    inputGateOutput += this->bi;
     inputGateOutput = inputGateOutput.unaryExpr(this->sigmoid);
 
     // cell input (c~)
     // cell input vector(Ct) = tanh(Wc*inputVec + Uc*PrevHiddenStateVec + bc)
-    Eigen::VectorXd cellInput = this->Wc * input + this->Uc * prevHidden + this->bc;
+    Eigen::VectorXd cellInput(hiddenSize);
+    cellInput.noalias() = this->Wc * input;
+    cellInput.noalias() += this->Uc * prevHidden;
+    cellInput += this->bc;
     cellInput = cellInput.unaryExpr(this->tanhLambda);
 
     // output gate
     // output gate output vector(Ot) = sigmoid(Wo*inputVec + Uo*PrevHiddenStateVec + bo)
-    Eigen::VectorXd outputGateOutput = this->Wo * input + this->Uo * prevHidden + this->bo;
+    Eigen::VectorXd outputGateOutput(hiddenSize);
+    outputGateOutput.noalias() = this->Wo * input;
+    outputGateOutput.noalias() += this->Uo * prevHidden;
+    outputGateOutput += this->bo;
     outputGateOutput = outputGateOutput.unaryExpr(this->sigmoid);
 
     // cell state vector = (Ft Hadamard product previous cell state vector) + (It Hadarmard product Ct)
@@ -223,4 +236,64 @@ void LSTMCell::reset(){
     this->hiddenState.setZero();
     this->cellState.setZero();
     this->stepData.clear();
+}
+
+Eigen::VectorXd LSTMCell::getParametersVector() {
+    size_t total = getParameterCount();
+    Eigen::VectorXd v(total);
+    size_t offset = 0;
+    auto copyMat = [&](const auto& M) {
+        const size_t sz = M.size();
+        Eigen::Map<const Eigen::VectorXd> mapped(M.data(), sz);
+        v.segment(offset, sz) = mapped;
+        offset += sz;
+    };
+    // Weights and biases (order must match setParametersVector)
+    copyMat(Wf); copyMat(Uf); copyMat(bf);
+    copyMat(Wi); copyMat(Ui); copyMat(bi);
+    copyMat(Wc); copyMat(Uc); copyMat(bc);
+    copyMat(Wo); copyMat(Uo); copyMat(bo);
+    return v;
+}
+
+Eigen::VectorXd LSTMCell::getGradientsVector(){
+    size_t total = getParameterCount();
+    Eigen::VectorXd v(total);
+    size_t offset = 0;
+    auto copyMat = [&](const auto& M) {
+        const size_t sz = M.size();
+        Eigen::Map<const Eigen::VectorXd> mapped(M.data(), sz);
+        v.segment(offset, sz) = mapped;
+        offset += sz;
+    };
+    // Gradients (deltaW, deltaU, deltaB) in the same order
+    copyMat(deltaWf); copyMat(deltaUf); copyMat(deltaBf);
+    copyMat(deltaWi); copyMat(deltaUi); copyMat(deltaBi);
+    copyMat(deltaWc); copyMat(deltaUc); copyMat(deltaBc);
+    copyMat(deltaWo); copyMat(deltaUo); copyMat(deltaBo);
+    return v;
+}
+
+void LSTMCell::setParametersVector(const Eigen::VectorXd& v) {
+    size_t offset = 0;
+    auto setMat = [&](auto& M) {
+        const size_t sz = M.size();
+        Eigen::Map<const Eigen::VectorXd> segment(v.data() + offset, sz);
+        Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(M.data(), M.rows(), M.cols()) = 
+            Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(segment.data(), M.rows(), M.cols());
+        offset += sz;
+    };
+    // Weights and biases (same order as getParametersVector)
+    setMat(Wf); setMat(Uf); setMat(bf);
+    setMat(Wi); setMat(Ui); setMat(bi);
+    setMat(Wc); setMat(Uc); setMat(bc);
+    setMat(Wo); setMat(Uo); setMat(bo);
+}
+
+void LSTMCell::zeroGrad() {
+    // reset all gradient accumulators (deltaW*, deltaU*, deltaB*) to zero
+    deltaWf.setZero(); deltaUf.setZero(); deltaBf.setZero();
+    deltaWi.setZero(); deltaUi.setZero(); deltaBi.setZero();
+    deltaWc.setZero(); deltaUc.setZero(); deltaBc.setZero();
+    deltaWo.setZero(); deltaUo.setZero(); deltaBo.setZero();
 }
