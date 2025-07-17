@@ -1,5 +1,6 @@
 #include "model/lstm.h"
 #include <cmath>
+#include <cstring>
 
 LSTMCell::LSTMCell(int numFeatures, int hiddenSize, int sequenceLength)
     : numFeatures(numFeatures), hiddenSize(hiddenSize),
@@ -23,7 +24,12 @@ LSTMCell::LSTMCell(int numFeatures, int hiddenSize, int sequenceLength)
 
       deltaWo(Eigen::MatrixXd::Zero(hiddenSize, numFeatures)),
       deltaUo(Eigen::MatrixXd::Zero(hiddenSize, hiddenSize)),
-      deltaBo(Eigen::VectorXd::Zero(hiddenSize)) {
+      deltaBo(Eigen::VectorXd::Zero(hiddenSize)),
+      parameterCount(
+        Wf.size() + Wi.size() + Wo.size() + Wc.size() +
+        Uf.size() + Ui.size() + Uo.size() + Uc.size() +
+        bf.size() + bi.size() + bo.size() + bc.size()
+      ), paramVec(Eigen::VectorXd(parameterCount)), gradientVec(Eigen::VectorXd(parameterCount)) {
     xavierWeightsInit();
 
     stepData.reserve(sequenceLength);
@@ -122,7 +128,7 @@ std::pair<Eigen::VectorXd, Eigen::VectorXd> LSTMCell::backwardPass(const Eigen::
 
     // dh_t/do_t = tanh(c_t) [chain rule from h_t = o_t * tanh(c_t)]
     // dL/do = dL/dh * dh/do = dh x tanh(c)
-    Eigen::VectorXd deltaO = deltaH.array() * tanhC.array();
+    Eigen::VectorXd deltaO = (deltaH.array() * tanhC.array()).matrix();
 
     // because h_t uses c_t, during bptt any loss in h_t ripples back into c_t
     // so dh_t/dc_t is needed from h_t = o_t cwiseProd tanh(c_t)
@@ -179,7 +185,7 @@ std::pair<Eigen::VectorXd, Eigen::VectorXd> LSTMCell::backwardPass(const Eigen::
 
     // TODO add notes as notes for project in some dir
     // add gradients to total gradient for weights in the sequence
-    // no aliasing means no matrix on both left and right side
+    // no aliasing means no matrix is on both left and right side
     // dL/dW(f/i/o/c~) = dL/d(f/i/o/c~)PreFunc * inputs^T
     this->deltaWf.noalias() += deltaFPreFunc * stepDataS.input.transpose();
     this->deltaWi.noalias() += deltaIPreFunc * stepDataS.input.transpose();
@@ -201,11 +207,11 @@ std::pair<Eigen::VectorXd, Eigen::VectorXd> LSTMCell::backwardPass(const Eigen::
     // deltaHPrev for return value
     // dL/d_hPrev = sum (dL/d(f/i/o/c~)PreFunc x d(f/i/o/c))/d_hPrev
     // d(f/i/o/c))/d_hPrev = U(f/i/o/c) so need to tranpose for same reason as before
-    Eigen::VectorXd deltaHPrev =
-        this->Uf.transpose() * deltaFPreFunc +
-        this->Ui.transpose() * deltaIPreFunc +
-        this->Uo.transpose() * deltaOPreFunc +
-        this->Uc.transpose() * deltaCTildePreFunc;
+    Eigen::VectorXd deltaHPrev(hiddenSize);
+    deltaHPrev.noalias() = this->Uf.transpose() * deltaFPreFunc;
+    deltaHPrev.noalias() += this->Ui.transpose() * deltaIPreFunc;
+    deltaHPrev.noalias() += this->Uo.transpose() * deltaOPreFunc;
+    deltaHPrev.noalias() += this->Uc.transpose() * deltaCTildePreFunc;
 
     this->stepData.pop_back();
     return {
@@ -213,23 +219,8 @@ std::pair<Eigen::VectorXd, Eigen::VectorXd> LSTMCell::backwardPass(const Eigen::
     };
 }
 
-int LSTMCell::getParameterCount(){
-    size_t count{};
-    count += Wf.size();
-    count += Wi.size();
-    count += Wo.size();
-    count += Wc.size();
-
-    count += Uf.size();
-    count += Ui.size();
-    count += Uo.size();
-    count += Uc.size();
-
-    count += bf.size();
-    count += bi.size();
-    count += bo.size();
-    count += bc.size();
-    return count;
+size_t LSTMCell::getParameterCount() const{
+    return this->parameterCount;
 }
 
 void LSTMCell::reset(){
@@ -238,40 +229,112 @@ void LSTMCell::reset(){
     this->stepData.clear();
 }
 
-Eigen::VectorXd LSTMCell::getParametersVector() {
-    size_t total = getParameterCount();
-    Eigen::VectorXd v(total);
-    size_t offset = 0;
-    auto copyMat = [&](const auto& M) {
-        const size_t sz = M.size();
-        Eigen::Map<const Eigen::VectorXd> mapped(M.data(), sz);
-        v.segment(offset, sz) = mapped;
-        offset += sz;
-    };
-    // Weights and biases (order must match setParametersVector)
-    copyMat(Wf); copyMat(Uf); copyMat(bf);
-    copyMat(Wi); copyMat(Ui); copyMat(bi);
-    copyMat(Wc); copyMat(Uc); copyMat(bc);
-    copyMat(Wo); copyMat(Uo); copyMat(bo);
-    return v;
+Eigen::VectorXd& LSTMCell::getParametersVector() {
+    double* destination = paramVec.data();
+
+    // cpy Wf
+    std::memcpy(destination, Wf.data(), sizeof(double) * static_cast<size_t>(Wf.size()));
+    destination += Wf.size();
+
+    // cpy Uf
+    std::memcpy(destination, Uf.data(), sizeof(double) * static_cast<size_t>(Uf.size()));
+    destination += Uf.size();   
+
+    // cpy bf
+    std::memcpy(destination, bf.data(), sizeof(double) * static_cast<size_t>(bf.size()));
+    destination += bf.size();
+
+    // cpy Wi
+    std::memcpy(destination, Wi.data(), sizeof(double) * static_cast<size_t>(Wi.size()));
+    destination += Wi.size();
+
+    // cpy Ui
+    std::memcpy(destination, Ui.data(), sizeof(double) * static_cast<size_t>(Ui.size()));
+    destination += Ui.size();
+
+    // cpy bi
+    std::memcpy(destination, bi.data(), sizeof(double) * static_cast<size_t>(bi.size()));
+    destination += bi.size();
+
+    // cpy Wc
+    std::memcpy(destination, Wc.data(), sizeof(double) * static_cast<size_t>(Wc.size()));
+    destination += Wc.size();
+
+    // cpy Uc
+    std::memcpy(destination, Uc.data(), sizeof(double) * static_cast<size_t>(Uc.size()));
+    destination += Uc.size();
+
+    // cpy bc
+    std::memcpy(destination, bc.data(), sizeof(double) * static_cast<size_t>(bc.size()));
+    destination += bc.size();
+
+    // cpy Wo
+    std::memcpy(destination, Wo.data(), sizeof(double) * static_cast<size_t>(Wo.size()));
+    destination += Wo.size();
+
+    // cpy Uo
+    std::memcpy(destination, Uo.data(), sizeof(double) * static_cast<size_t>(Uo.size()));
+    destination += Uo.size();
+
+    // cpy bo
+    std::memcpy(destination, bo.data(), sizeof(double) * static_cast<size_t>(bo.size()));
+    destination += bo.size();
+
+    return paramVec;
 }
 
-Eigen::VectorXd LSTMCell::getGradientsVector(){
-    size_t total = getParameterCount();
-    Eigen::VectorXd v(total);
-    size_t offset = 0;
-    auto copyMat = [&](const auto& M) {
-        const size_t sz = M.size();
-        Eigen::Map<const Eigen::VectorXd> mapped(M.data(), sz);
-        v.segment(offset, sz) = mapped;
-        offset += sz;
-    };
-    // Gradients (deltaW, deltaU, deltaB) in the same order
-    copyMat(deltaWf); copyMat(deltaUf); copyMat(deltaBf);
-    copyMat(deltaWi); copyMat(deltaUi); copyMat(deltaBi);
-    copyMat(deltaWc); copyMat(deltaUc); copyMat(deltaBc);
-    copyMat(deltaWo); copyMat(deltaUo); copyMat(deltaBo);
-    return v;
+Eigen::VectorXd& LSTMCell::getGradientsVector(){
+    double* destination = gradientVec.data();
+
+    // cpy dWf
+    std::memcpy(destination, deltaWf.data(), sizeof(double) * static_cast<size_t>(deltaWf.size()));
+    destination += deltaWf.size();
+
+    // cpy dUf
+    std::memcpy(destination, deltaUf.data(), sizeof(double) * static_cast<size_t>(deltaUf.size()));
+    destination += deltaUf.size();   
+
+    // cpy dbf
+    std::memcpy(destination, deltaBf.data(), sizeof(double) * static_cast<size_t>(deltaBf.size()));
+    destination += deltaBf.size();
+
+    // cpy dWi
+    std::memcpy(destination, deltaWi.data(), sizeof(double) * static_cast<size_t>(deltaWi.size()));
+    destination += deltaWi.size();
+
+    // cpy dUi
+    std::memcpy(destination, deltaUi.data(), sizeof(double) * static_cast<size_t>(deltaUi.size()));
+    destination += deltaUi.size();
+
+    // cpy dbi
+    std::memcpy(destination, deltaBi.data(), sizeof(double) * static_cast<size_t>(deltaBi.size()));
+    destination += deltaBi.size();
+
+    // cpy dWc
+    std::memcpy(destination, deltaWc.data(), sizeof(double) * static_cast<size_t>(deltaWc.size()));
+    destination += deltaWc.size();
+
+    // cpy dUc
+    std::memcpy(destination, deltaUc.data(), sizeof(double) * static_cast<size_t>(deltaUc.size()));
+    destination += deltaUc.size();
+
+    // cpy dbc
+    std::memcpy(destination, deltaBc.data(), sizeof(double) * static_cast<size_t>(deltaBc.size()));
+    destination += deltaBc.size();
+
+    // cpy dWo
+    std::memcpy(destination, deltaWo.data(), sizeof(double) * static_cast<size_t>(deltaWo.size()));
+    destination += deltaWo.size();
+
+    // cpy dUo
+    std::memcpy(destination, deltaUo.data(), sizeof(double) * static_cast<size_t>(deltaUo.size()));
+    destination += deltaUo.size();
+
+    // cpy dbo
+    std::memcpy(destination, deltaBo.data(), sizeof(double) * static_cast<size_t>(deltaBo.size()));
+    destination += deltaBo.size();
+
+    return gradientVec;
 }
 
 void LSTMCell::setParametersVector(const Eigen::VectorXd& v) {

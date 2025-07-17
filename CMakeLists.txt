@@ -17,7 +17,7 @@ include_directories(include)
 
 # Gather source files
 file(GLOB_RECURSE SRC_FILES
-    src/*.cpp
+    src/**/*.cpp
 )
 
 # Create main executable

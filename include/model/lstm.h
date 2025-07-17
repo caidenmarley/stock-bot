@@ -22,17 +22,17 @@ class LSTMCell {
     Eigen::VectorXd forwardPass(const Eigen::VectorXd& input);
     std::pair<Eigen::VectorXd, Eigen::VectorXd> backwardPass(const Eigen::VectorXd& deltaH, const Eigen::VectorXd& deltaC);
 
-    int getParameterCount();    // get total num of elements in weights and biases
+    size_t getParameterCount() const;    // get total num of elements in weights and biases
 
     void reset();   // clear stepdata and clear hidden and cell state
 
-    Eigen::VectorXd getHiddenState(){return this->hiddenState;}
+    Eigen::VectorXd getHiddenState() const {return this->hiddenState;}
 
-    Eigen::VectorXd getCellState(){return this->cellState;}
+    Eigen::VectorXd getCellState() const {return this->cellState;}
 
-    Eigen::VectorXd getParametersVector();
+    Eigen::VectorXd& getParametersVector();
 
-    Eigen::VectorXd getGradientsVector();
+    Eigen::VectorXd& getGradientsVector();
 
     void setParametersVector(const Eigen::VectorXd& v);
 
@@ -95,4 +95,9 @@ class LSTMCell {
     // output gate
     Eigen::MatrixXd deltaWo, deltaUo;
     Eigen::VectorXd deltaBo;
+
+    size_t parameterCount;
+
+    Eigen::VectorXd paramVec;
+    Eigen::VectorXd gradientVec;
 };
