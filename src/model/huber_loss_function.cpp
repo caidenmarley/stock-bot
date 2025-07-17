@@ -7,27 +7,38 @@ double HuberLossFunction::forward(const Eigen::VectorXd& predictions, const Eige
 
     auto residualsAbs = residuals.abs();
 
-    // quadratic term 0.5 * r^2
-    Eigen::ArrayXd quadraticTerm = 0.5*residuals.square();
+    if(buffer.size() != residuals.size()){
+        // single resize so you can reuse buffer on later calls
+        buffer.resize(residuals.size());
+    }
 
-    // delta * (abs(r) - 0.5 * delta)
-    Eigen::ArrayXd linearTerm = delta*(residualsAbs - halfDelta);
+    // quadratic term: 0.5 * r^2
+
+    // linear term: delta * (abs(r) - 0.5 * delta)
 
     // select quadratic if abs(r) <= delta else linear
     // .select: conditionType, then expression, else expression
-    Eigen::ArrayXd lossVector = (residualsAbs <= delta).select(quadraticTerm, linearTerm);
 
-    return lossVector.mean();
+    // does the selection in a single pass
+    buffer = (residualsAbs <= delta).select(0.5*residuals.square(), delta*(residualsAbs - halfDelta));
+
+    return buffer.mean();
 }
 
 Eigen::VectorXd HuberLossFunction::backward(){
+    if(buffer.size() != residuals.size()){
+        // single resize so you can reuse buffer on later calls
+        buffer.resize(residuals.size());
+    }
+
     // dL/dr (L is loss, r is residuals)
     // r if abs(r) <= delta, delta
     // delta*(d/dr)*abs(r) so delta*sign(r) if abs(r) > delta
 
-    Eigen::VectorXd rGradients = (residuals.abs() <= delta).select(residuals, delta*residuals.sign());
+    // reuse buffer to save allocation
+    buffer = (residuals.abs() <= delta).select(residuals, delta*residuals.sign());
 
     // r = target - prediction so dr/d(prediction) = -1
     // so dL/d(prediction) = -dL/dr, then average over n (mean loss)
-    return -rGradients / residuals.size();
+    return (-buffer / residuals.size()).matrix();
 }

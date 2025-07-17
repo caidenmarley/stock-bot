@@ -11,4 +11,5 @@ private:
     double delta;
     double halfDelta;
     Eigen::ArrayXd residuals; // target - prediction
+    Eigen::ArrayXd buffer; // full buffer to select quadratic or linear term wihtout having to declare multiple ArrayXd
 };
