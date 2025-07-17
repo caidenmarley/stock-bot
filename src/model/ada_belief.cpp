@@ -2,6 +2,7 @@
 
 AdaBelief::AdaBelief(std::size_t vecSize, double learningRate, double b1, double b2, double e) :
     learningRate(learningRate), b1(b1), b2(b2), e(e), time(0), b1Power(1.0), b2Power(1.0), // b1^0 and b2^0
+    oneMinusb1(1.0-b1), oneMinusb2(1.0-b2), // precompute to use in each update call
     m(Eigen::VectorXd::Zero(vecSize)), s(Eigen::VectorXd::Zero(vecSize)){}
 
 void AdaBelief::update(Eigen::VectorXd& params, const Eigen::VectorXd& gradients){
@@ -14,10 +15,10 @@ void AdaBelief::update(Eigen::VectorXd& params, const Eigen::VectorXd& gradients
     auto gradArr = gradients.array();
 
     // m_t = b_1*m_t-1 + (1-b_1)g_t
-    this->m = b1*m + (1.0-b1)*gradArr;
+    this->m = b1*m + oneMinusb1*gradArr;
     
     // s_t = b_2*s_t-1 + (1-b_2)(g_t-m_t)^2 + e
-    this->s = b2*s + (1.0-b2)*(gradArr-m).square();
+    this->s = b2*s + oneMinusb2*(gradArr-m).square();
 
     // m_t / 1 - b_1^t
     Eigen::ArrayXd mBiasCorrection = m / (1-b1Power);
