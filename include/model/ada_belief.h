@@ -12,7 +12,8 @@ private:
     double b1, b2;
     double e;
     size_t time;
+    double b1Power, b2Power;
 
-    Eigen::VectorXd m;  // exponential moving average of gradient
-    Eigen::VectorXd s;  // EMA of (g - m)^2 (belief in step size)
+    Eigen::ArrayXd m;  // exponential moving average of gradient
+    Eigen::ArrayXd s;  // EMA of (g - m)^2 (belief in step size)
 };
