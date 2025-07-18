@@ -38,6 +38,10 @@ class LSTMCell {
 
     void zeroGrad();
 
+    void saveParameters(const std::string& path) const;
+
+    void loadParameters(const std::string& path);
+
   private:
     int numFeatures;
     int hiddenSize;

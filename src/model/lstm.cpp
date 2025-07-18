@@ -1,6 +1,7 @@
 #include "model/lstm.h"
 #include <cmath>
 #include <cstring>
+#include <fstream>
 
 LSTMCell::LSTMCell(int numFeatures, int hiddenSize, int sequenceLength)
     : numFeatures(numFeatures), hiddenSize(hiddenSize),
@@ -359,4 +360,53 @@ void LSTMCell::zeroGrad() {
     deltaWi.setZero(); deltaUi.setZero(); deltaBi.setZero();
     deltaWc.setZero(); deltaUc.setZero(); deltaBc.setZero();
     deltaWo.setZero(); deltaUo.setZero(); deltaBo.setZero();
+}
+
+void LSTMCell::saveParameters(const std::string& path) const{
+    // strip const so you can call non const method getParametersVector()
+    const Eigen::VectorXd& paramVector = const_cast<LSTMCell*>(this)->getParametersVector();
+
+    std::ofstream out{path, std::ios::binary};
+    if(!out){
+        throw std::runtime_error("Failed to open binary file");
+    }
+
+    // first writes how many parameters there are
+    out.write(reinterpret_cast<const char*>(&parameterCount), sizeof(parameterCount));
+
+    // then write actual parameter data
+    out.write(reinterpret_cast<const char*>(paramVector.data()), sizeof(double) * parameterCount);
+
+    if(!out){
+        throw std::runtime_error("Error writing binary file");
+    }
+}
+
+void LSTMCell::loadParameters(const std::string& path){
+    std::ifstream in{path, std::ios::binary};
+    if(!in){
+        throw std::runtime_error("Failed to open binary file");
+    }
+
+    size_t numParamsInBin;
+
+    in.read(reinterpret_cast<char*>(&numParamsInBin), sizeof(numParamsInBin));
+
+    if(!in){
+        throw std::runtime_error("Error reading parameter count");
+    }
+
+    if(numParamsInBin != this->parameterCount){
+        throw std::runtime_error("parameter count doesnt match, paramsInBin: " + std::to_string(numParamsInBin) + "paramsInClass: " + std::to_string(this->parameterCount));
+    }
+
+    Eigen::VectorXd loadedParams(numParamsInBin);
+
+    in.read(reinterpret_cast<char*>(loadedParams.data()), sizeof(double) * static_cast<std::size_t>(numParamsInBin));
+
+    if(!in){
+        throw std::runtime_error("Error reading parameter data from bin");
+    }
+
+    this->setParametersVector(loadedParams);
 }
