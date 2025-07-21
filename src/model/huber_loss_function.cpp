@@ -2,6 +2,14 @@
 
 HuberLossFunction::HuberLossFunction(double delta) : delta(delta), halfDelta(delta*0.5){}
 
+// overloaded forward pass, which converts doubles into singular vectors to be used in the regular forward pass func
+double HuberLossFunction::forward(const double& prediction, const double& target){
+    Eigen::VectorXd predictionVector(1), targetVector(1);
+    predictionVector(0) = prediction;
+    targetVector(0) = target;
+    return this->forward(predictionVector, targetVector);
+}
+
 double HuberLossFunction::forward(const Eigen::VectorXd& predictions, const Eigen::VectorXd& targets){
     this->residuals = (targets - predictions).array();
 

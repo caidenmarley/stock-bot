@@ -4,6 +4,7 @@
 class HuberLossFunction{
 public:
     HuberLossFunction(double delta);
+    double forward(const double& prediction, const double& target);
     double forward(const Eigen::VectorXd& predictions, const Eigen::VectorXd& targets);
 
     Eigen::VectorXd backward();
