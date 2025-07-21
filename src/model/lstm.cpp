@@ -3,6 +3,11 @@
 #include <cstring>
 #include <fstream>
 
+
+/*  numFeatures: num columns on csv being fed as inputs into lstm
+ *  hiddenSize: size of weights matrices
+ *  sequenceLength: how many days at a time to feed into network
+ */ 
 LSTMCell::LSTMCell(int numFeatures, int hiddenSize, int sequenceLength)
     : numFeatures(numFeatures), hiddenSize(hiddenSize),
       Wf(hiddenSize, numFeatures), Uf(hiddenSize, hiddenSize), bf(Eigen::VectorXd::Constant(hiddenSize, 1.0)), // set to 1 so lstm doesnt forget at the start
@@ -224,6 +229,7 @@ size_t LSTMCell::getParameterCount() const{
     return this->parameterCount;
 }
 
+// clears hiddenState, cellState and stepData
 void LSTMCell::reset(){
     this->hiddenState.setZero();
     this->cellState.setZero();

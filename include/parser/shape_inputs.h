@@ -117,6 +117,10 @@ class StockData {
         positionIndex = 0;
     }
 
+    size_t getNumFeatures() const{
+        return this->numFeatures;
+    }
+
   private:
     size_t numTimesteps;  // days per sequence window
     size_t numFeatures;   // feature count per day (6)
