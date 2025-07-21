@@ -8,9 +8,9 @@
 
 class Trainer{
 public:
-    Trainer(int numFeatures, int hiddenSize, int sequenceLength, int batchSize, double learningRate, double delta,
+    Trainer(const int numFeatures, const int hiddenSize, const int sequenceLength, const int batchSize, const double learningRate, const double delta,
         const std::vector<PriceData>& rawTrainingData, const std::vector<PriceData>& rawValidationData);
-    void run(int epochs);
+    void run(const int epochs);
 private:
     LSTMCell lstm;
     Dense outputLayer;

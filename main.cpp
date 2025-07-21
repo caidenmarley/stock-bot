@@ -4,105 +4,48 @@
 #include "model/ada_belief.h"
 #include "model/huber_loss_function.h"
 #include "model/dense.h"
+#include "model/trainer.h"
 #include <iostream>
 
 int main() {
     try {
-        // --- Hyperparameters ---
-        const std::string csvPath    = "data/AAAU.csv";
-        const int sequenceLength     = 40;    // timesteps per sequence
-        const int batchSize          = 20;    // sequences per batch
-        const int hiddenSize         = 64;    // LSTM hidden layer size
-        const int epochs             = 10;    // number of full passes
-        const double learningRate    = 1e-3;  // optimizer learning rate
-        const double huberDelta      = 1.0;   // Huber loss threshold
-
-        // --- Load and Shape Data ---
+        // load data
+        const std::string csvPath = "data/AAAU.csv";
         CSVLoader loader(csvPath);
-        const auto& rawData = loader.getData();
+        const std::vector<PriceData> rawData = loader.getData();
+        std::cout << "parsed " << rawData.size() << " rows from CSV" << std::endl;
 
-        StockData stockData(rawData, sequenceLength, batchSize);
-        int numFeatures = static_cast<int>(6);
-        std::cout << "Data Loaded" << std::endl;
-        // --- Model, Optimizer & Loss ---
-        LSTMCell lstm(numFeatures, hiddenSize, sequenceLength);
-        AdaBelief optimizer(lstm.getParameterCount(), learningRate);
-        HuberLossFunction huber(huberDelta);
-        Dense outLayer(hiddenSize);
+        // hyperparameters
+        const int numFeatures = 6;
+        const int hiddenSize = 32;  // dimension of lstm matrices
+        const int sequenceLength = 20; // number of days per sequence
+        const int batchSize = 10; // number of sequences per batch
+        const double learningRate = 1e-4;
+        const double delta = 1.0; // huber loss delta value
+        const int epochs = 10;
 
-        // --- Training Loop ---
-        for (int epoch = 1; epoch <= epochs; ++epoch) {
-            stockData.reset();
-            double epochLoss = 0.0;
-            size_t batchCount = 0;
+        // split data into 80/20 train/validation split
+        int maxStartSequence = rawData.size() - sequenceLength;  
+        int splitStart = 0.8*maxStartSequence;
 
-            while (stockData.hasAnotherBatch()) {
-                auto [inputBatch, targetBatch] = stockData.nextBatch();
-                int currentBatch = static_cast<int>(targetBatch.size());
-                
-                lstm.zeroGrad();
-                outLayer.zeroGrad();
+        std::vector<PriceData> trainingData(rawData.begin(), rawData.begin() + (splitStart + sequenceLength));
+        std::vector<PriceData> validationData(rawData.begin() + splitStart, rawData.end());
 
-                // Process each sequence independently
-                for (int i = 0; i < currentBatch; ++i) {
-                    // Reset LSTM internal state for this sequence
-                    lstm.reset();
+        Trainer trainer(
+            numFeatures,
+            hiddenSize,
+            sequenceLength,
+            batchSize, 
+            learningRate,
+            delta,
+            trainingData,
+            validationData
+        );
 
-                    Eigen::VectorXd h;
-                    for (int t = 0; t < sequenceLength; ++t) {
-                        // Map features for sequence i at timestep t
-                        double* ptr = inputBatch.data() + ((i * sequenceLength + t) * numFeatures);
-                        Eigen::Map<Eigen::VectorXd> x_t(ptr, numFeatures);
-                        h = lstm.forwardPass(x_t);
-                    }
-                    double yPred = outLayer.forward(h);
-                    
-
-                    Eigen::VectorXd singleY(1), singleT(1);
-                    singleY(0) = yPred;
-                    singleT(0) = targetBatch(i);
-                    double loss = huber.forward(singleY, singleT);
-                    Eigen::VectorXd gradVec = huber.backward();
-                    double dLdy = gradVec(0);
-                    epochLoss += loss;
-
-                    outLayer.backward(h, dLdy);
-
-                    Eigen::VectorXd dh_next = outLayer.W.transpose() * dLdy;
-                    Eigen::VectorXd dc_next = Eigen::VectorXd::Zero(hiddenSize);
-                    for (int t = sequenceLength - 1; t >= 0; --t) {
-                        lstm.backwardPass(dh_next, dc_next);
-                        // after first step, only carry cell‐state gradient
-                        dh_next.setZero();
-                    }
-                }
-                //std::cout << "forward & backward done" << std::endl;
-
-                // 6) update LSTM weights via AdaBelief
-                {
-                    auto params   = lstm.getParametersVector();
-                    auto gradsVec = lstm.getGradientsVector();
-                    optimizer.update(params, gradsVec);
-                    lstm.setParametersVector(params);
-                    //std::cout << "adabelief done" << std::endl;
-                }
-
-                // 7) update Dense layer with simple SGD
-                outLayer.W -= learningRate * outLayer.dW;
-                outLayer.b -= learningRate * outLayer.db;
-
-                ++batchCount;
-            }
-
-            std::cout << "Epoch " << epoch
-                      << " completed, avg loss = " << (epochLoss / batchCount)
-                      << "\n";
-        }
+        trainer.run(epochs);
 
     } catch (const std::exception& ex) {
         std::cerr << "Error: " << ex.what() << std::endl;
         return 1;
     }
-
-    return 0;
 }

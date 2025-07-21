@@ -1,13 +1,15 @@
 #include "model/trainer.h"
+#include <iostream>
+#include <iomanip>
 
-Trainer::Trainer(int numFeatures, int hiddenSize, int sequenceLength, int batchSize, double learningRate, double delta,
+Trainer::Trainer(const int numFeatures, const int hiddenSize, const int sequenceLength, const int batchSize, const double learningRate, const double delta,
 const std::vector<PriceData>& rawTrainingData, const std::vector<PriceData>& rawValidationData): 
     lstm(numFeatures, hiddenSize, sequenceLength), outputLayer(hiddenSize), 
     optimiser(lstm.getParameterCount(), learningRate),  huberLoss(delta),
     sequenceLength(sequenceLength), batchSize(batchSize), learningRate(learningRate), 
     trainingData(rawTrainingData, sequenceLength, batchSize), validationData(rawValidationData, sequenceLength, batchSize){}
 
-void Trainer::run(int epochs){
+void Trainer::run(const int epochs){
     for(int epoch = 1; epoch <= epochs; epoch++){
         // TRAINING
         // reset trainingData position index, so batches start from the beginning
@@ -64,8 +66,71 @@ void Trainer::run(int epochs){
                     // tie assigns the first var in the pair to the first var in the tie, then second to second
                     // dLdhNext = lstm.backwardPass().first, dLdcNext = lstm.backwardPass().second 
                     std::tie(dLdhNext, dLdcNext) = lstm.backwardPass(dLdhNext, dLdcNext);
+
+                    // the external dLdhNext is 0 as you dont want the output layer gradient to affect anything other than
+                    // the first step of the back pass, dLdh prev is still calculated internally in the backpass method
+                    dLdhNext.setZero();
                 }
             }
+            // scope for optimiser variables
+            {
+                Eigen::VectorXd params = lstm.getParametersVector();
+                Eigen::VectorXd gradients = lstm.getGradientsVector();
+                optimiser.update(params, gradients);
+                lstm.setParametersVector(params);
+            }
+
+            // Dense layer: using SGD on W and b
+            outputLayer.W -= learningRate * outputLayer.dW;
+            outputLayer.b -= learningRate * outputLayer.db;
+
+            trainingBatchCount++;
         }
+
+        double avgTrainingLoss{};
+        if(trainingBatchCount > 0){
+            avgTrainingLoss = trainingLoss/trainingBatchCount;
+        }else{
+            avgTrainingLoss = 0.0;
+        }
+
+        // VALIDATION - measures how the model does with the weights and bias it just worked out in training
+        validationData.reset();
+        double validationLoss{};
+        int validationBatchCount{};
+
+        while(validationData.hasAnotherBatch()){
+            auto [inputBatch, targetBatch] = validationData.nextBatch();
+            int currentBatch = targetBatch.size();
+
+            for(int i = 0; i < currentBatch; i++){
+                lstm.reset();   // clear prev states
+                Eigen::VectorXd hiddenState;
+                for (int j = 0; j < sequenceLength; j++){
+                    double* ptr = inputBatch.data() + ((i*sequenceLength + j) * validationData.getNumFeatures());
+                    Eigen::Map<Eigen::VectorXd> inputs(ptr, validationData.getNumFeatures());
+
+                    hiddenState = lstm.forwardPass(inputs);
+                }
+
+                double targetPrediction = outputLayer.forward(hiddenState);
+
+                validationLoss += huberLoss.forward(targetPrediction, targetBatch(i));
+            }
+            validationBatchCount++;
+        }
+
+        double avgValidationLoss{};
+        if(validationBatchCount > 0){
+            avgValidationLoss = validationLoss/validationBatchCount;
+        }else{
+            avgValidationLoss = 0.0;
+        }
+
+        std::cout << "Epoch " << epoch
+            << " | train loss: " << std::fixed << std::setprecision(6)
+            << avgTrainingLoss
+            << " | val  loss: " << std::fixed << std::setprecision(6)
+            << avgValidationLoss << "\n";
     }
 }
