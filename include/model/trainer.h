@@ -4,7 +4,7 @@
 #include "model/dense.h"
 #include "model/huber_loss_function.h"
 #include "model/lstm.h"
-#include "parser/shape_inputs.h"
+#include "inputs/shape_inputs.h"
 
 class Trainer{
 public:

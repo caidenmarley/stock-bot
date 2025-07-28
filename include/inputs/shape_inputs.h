@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include "parser/parser.h"
+#include "inputs/parser.h"
 #include <Eigen/Dense>
 #include <unsupported/Eigen/CXX11/Tensor>
 

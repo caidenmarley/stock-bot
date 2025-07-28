@@ -1,4 +1,4 @@
-#include "parser/parser.h"
+#include "inputs/parser.h"
 #include <chrono>
 #include <fstream>
 #include <iostream>
