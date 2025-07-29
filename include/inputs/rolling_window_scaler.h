@@ -5,6 +5,7 @@
 #include <deque>
 #include "inputs/parser.h"
 
+// Scales each day based on the last "windowSize" days of history
 class RollingWindowScaler{
 public:
     RollingWindowScaler(size_t windowSize, size_t numFeatures);
@@ -12,7 +13,7 @@ public:
     std::vector<double> scaledValuesPerDay() const; // gets scaled values for the day
     void reset();
     size_t getWindowSize() const;
-    size_t getNumFeeatures() const;
+    size_t getNumFeatures() const;
 private:
     size_t windowSize;
     size_t numFeatures;
@@ -20,10 +21,4 @@ private:
     // both of size numFeatures
     std::vector<double> sums; // running sum for each feature
     std::vector<double> sumsOfSquares; // running sum of squares for each feature
-
-    // mean = sum[i]/windowSize
-    double calcMean(size_t i) const;
-
-    // standard deviation = sqrt(sumOfSquares[i]/windowSize - mean^2)
-    double calcStdDev(size_t i) const;
 };
