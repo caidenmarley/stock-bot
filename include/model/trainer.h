@@ -8,8 +8,8 @@
 
 class Trainer{
 public:
-    Trainer(const int numFeatures, const int hiddenSize, const int sequenceLength, const int batchSize, const double learningRate, const double delta,
-        const std::vector<PriceData>& rawTrainingData, const std::vector<PriceData>& rawValidationData);
+    Trainer(int numFeatures, int hiddenSize, int sequenceLength, int batchSize, double learningRate, double delta,
+        size_t windowSize, const std::vector<PriceData>& rawTrainingData, const std::vector<PriceData>& rawValidationData);
     void run(const int epochs);
 private:
     LSTMCell lstm;
@@ -19,6 +19,7 @@ private:
     int sequenceLength;
     int batchSize;
     double learningRate;
+    size_t windowSize;
     StockData trainingData;
     StockData validationData;
 };

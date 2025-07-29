@@ -16,13 +16,14 @@ int main() {
         std::cout << "parsed " << rawData.size() << " rows from CSV" << std::endl;
 
         // hyperparameters
-        const int numFeatures = 6;
-        const int hiddenSize = 32;  // dimension of lstm matrices
-        const int sequenceLength = 20; // number of days per sequence
-        const int batchSize = 10; // number of sequences per batch
-        const double learningRate = 1e-4;
-        const double delta = 1.0; // huber loss delta value
-        const int epochs = 10;
+        int numFeatures = 6;
+        int hiddenSize = 32;  // dimension of lstm matrices
+        int sequenceLength = 20; // number of days per sequence
+        int batchSize = 10; // number of sequences per batch
+        double learningRate = 1e-4;
+        double windowSize = 256;
+        double delta = 1.0; // huber loss delta value
+        int epochs = 10;
 
         // split data into 80/20 train/validation split
         int maxStartSequence = rawData.size() - sequenceLength;  
@@ -38,6 +39,7 @@ int main() {
             batchSize, 
             learningRate,
             delta,
+            windowSize,
             trainingData,
             validationData
         );

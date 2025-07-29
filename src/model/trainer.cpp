@@ -2,12 +2,12 @@
 #include <iostream>
 #include <iomanip>
 
-Trainer::Trainer(const int numFeatures, const int hiddenSize, const int sequenceLength, const int batchSize, const double learningRate, const double delta,
-const std::vector<PriceData>& rawTrainingData, const std::vector<PriceData>& rawValidationData): 
+Trainer::Trainer(int numFeatures, int hiddenSize, int sequenceLength, int batchSize, double learningRate, double delta,
+size_t windowSize, const std::vector<PriceData>& rawTrainingData, const std::vector<PriceData>& rawValidationData): 
     lstm(numFeatures, hiddenSize, sequenceLength), outputLayer(hiddenSize), 
     optimiser(lstm.getParameterCount(), learningRate),  huberLoss(delta),
-    sequenceLength(sequenceLength), batchSize(batchSize), learningRate(learningRate), 
-    trainingData(rawTrainingData, sequenceLength, batchSize), validationData(rawValidationData, sequenceLength, batchSize){}
+    sequenceLength(sequenceLength), batchSize(batchSize), learningRate(learningRate), windowSize(windowSize),
+    trainingData(rawTrainingData, sequenceLength, batchSize, windowSize), validationData(rawValidationData, sequenceLength, batchSize, windowSize){}
 
 void Trainer::run(const int epochs){
     for(int epoch = 1; epoch <= epochs; epoch++){

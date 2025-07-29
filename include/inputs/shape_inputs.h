@@ -3,10 +3,10 @@
 #include <algorithm>
 #include <stdexcept>
 #include <vector>
-
 #include "inputs/parser.h"
 #include <Eigen/Dense>
 #include <unsupported/Eigen/CXX11/Tensor>
+#include "inputs/rolling_window_scaler.h"
 
 // prepares raw PriceData into tensors for LSTM training
 class StockData {
@@ -16,11 +16,12 @@ class StockData {
     // - numTimesteps: how many days each sequence covers
     // - batchSize: how many sequences per training batch
     // - feeds "batchSize" sequences each with "numTimesteps" days into model
-    StockData(const std::vector<PriceData>& rawData, size_t numTimestepsInp, size_t batchSizeInp)
+    StockData(const std::vector<PriceData>& rawData, size_t numTimestepsInp, size_t batchSizeInp, size_t windowSize)
         : numTimesteps(numTimestepsInp),
           numFeatures(6),
           batchSize(batchSizeInp),
-          positionIndex(0) {
+          positionIndex(0),
+          scaler(windowSize, numFeatures) {
         // Number of days available
         const size_t numDays = rawData.size();
         if (numDays < numTimesteps + 1) { // You need at least 1 day to compare with models predictions
@@ -36,8 +37,13 @@ class StockData {
         Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> feature_matrix(numDays, numFeatures);
 
         for (size_t day = 0; day < numDays; ++day) {
-            // inputs day vec, and ptr to start of corresponding row in feature matrix
-            priceToFeatures(rawData[day], feature_matrix.data() + day * numFeatures);
+            // rolling window scaling per day
+            scaler.add(rawData[day]);
+            std::vector<double> scaled = scaler.scaledValuesPerDay();
+            double* ptr = feature_matrix.data() + day * numFeatures;
+            for(size_t i = 0; i < numFeatures; i++){
+                ptr[i] = scaled[i];
+            }
         }
 
         // inputs: shape [numSequences][numTimesteps][numFeatures]
@@ -128,17 +134,7 @@ class StockData {
     size_t numSequences;  // total sliding window sequences
     size_t positionIndex; // how many sequences have been served
 
+    RollingWindowScaler scaler;
     Eigen::Tensor<double, 3, Eigen::RowMajor> inputs; // [numSequences][numTimesteps][numFeatures]
     Eigen::VectorXd targets;                          // [numSequences]
-
-    // extract raw PriceData into array of numFeatures doubles
-    static void priceToFeatures(const PriceData& p, double* out) {
-        // ptr arithmetic [] to get datas resting spot in matrix
-        out[0] = p.open;
-        out[1] = p.high;
-        out[2] = p.low;
-        out[3] = p.close;
-        out[4] = p.adjClose;
-        out[5] = static_cast<double>(p.volume);
-    }
 };
