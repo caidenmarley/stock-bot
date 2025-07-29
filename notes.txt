@@ -1,0 +1,1 @@
+have multiple independant lstms maybe with diff hyperparams on the numerial data and average their predictions (maybe discard outliers etc)
