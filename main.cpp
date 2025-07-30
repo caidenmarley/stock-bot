@@ -21,7 +21,7 @@ int main() {
         int sequenceLength = 20; // number of days per sequence
         int batchSize = 10; // number of sequences per batch
         double learningRate = 1e-4;
-        double windowSize = 256;
+        double windowSize = 256; // number of days in each scaler window
         double delta = 1.0; // huber loss delta value
         int epochs = 10;
 
