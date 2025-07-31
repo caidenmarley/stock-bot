@@ -5,7 +5,22 @@
 
 class AdaBelief{
 public:
+    /**
+     * Initialise all member variables and set m and s arrays to all be 0
+     * 
+     * @param vecSize the number of parameters to be optimised
+     * @param learningRate learning rate of model
+     * @param b1 decay rate for running average of past gradients
+     * @param b2 decay rate for the running average of the squared difference between the gradient and its belief
+     * @param e avoid division by 0
+     */
     AdaBelief(std::size_t vecSize, double learningRate, double b1 = 0.9, double b2 = 0.999, double e = 1e-8);
+    /**
+     * Performs the optimisation algorithm to tweat the params based on the gradients
+     * 
+     * @param params the parameters passed in (the weights and biases)
+     * @param gradients the calculated gradients from the backwards pass
+     */
     void update(Eigen::VectorXd& params, const Eigen::VectorXd& gradients);
 private:
     double learningRate;

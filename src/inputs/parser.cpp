@@ -3,7 +3,6 @@
 #include <fstream>
 #include <iostream>
 
-// Loads and parses the CSV file while timing
 CSVLoader::CSVLoader(const std::string& filename) {
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -15,12 +14,10 @@ CSVLoader::CSVLoader(const std::string& filename) {
     std::cout << "Parsed " << data.size() << " rows in " << elapsed.count() << " seconds.\n";
 }
 
-// getter for parsed data
 const std::vector<PriceData>& CSVLoader::getData() const {
     return data;
 }
 
-// reads file into buffer
 void CSVLoader::readFile(const std::string& filename) {
     // open file in binary with the pointer straight to the end of the file
     std::ifstream file(filename, std::ios::binary | std::ios::ate);
@@ -41,7 +38,6 @@ void CSVLoader::readFile(const std::string& filename) {
     file.close();
 }
 
-// parse csv buffer into PriceData
 void CSVLoader::parseBuffer() {
     char* ptr = buffer.data();                 // ptr to start of buffer
     char* end = buffer.data() + buffer.size(); // ptr to end of buffer

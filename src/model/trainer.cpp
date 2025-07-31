@@ -7,7 +7,8 @@ size_t windowSize, const std::vector<PriceData>& rawTrainingData, const std::vec
     lstm(numFeatures, hiddenSize, sequenceLength), outputLayer(hiddenSize), 
     optimiser(lstm.getParameterCount(), learningRate),  huberLoss(delta),
     sequenceLength(sequenceLength), batchSize(batchSize), learningRate(learningRate), windowSize(windowSize),
-    trainingData(rawTrainingData, sequenceLength, batchSize, windowSize), validationData(rawValidationData, sequenceLength, batchSize, windowSize){}
+    trainingData(rawTrainingData, numFeatures, sequenceLength, batchSize, windowSize), 
+    validationData(rawValidationData, numFeatures, sequenceLength, batchSize, windowSize){}
 
 void Trainer::run(const int epochs){
     for(int epoch = 1; epoch <= epochs; epoch++){

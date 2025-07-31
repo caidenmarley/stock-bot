@@ -1,13 +1,13 @@
 #include "inputs/rolling_window_scaler.h"
 #include <cmath>
 
-// TODO could maybe do some sort of ringer buffer with contiguous memory for fewer cache misses
+// TODO could maybe do some sort of ring buffer with contiguous memory for fewer cache misses
 
 RollingWindowScaler::RollingWindowScaler(size_t windowSize, size_t numFeatures)
     : windowSize(windowSize), numFeatures(numFeatures),
     rawValues(numFeatures), sums(numFeatures, 0.0), sumsOfSquares(numFeatures, 0.0){}
 
-// adds value to values window, removes value from queue if queue is bigger than windowSize
+
 void RollingWindowScaler::add(const PriceData& data){
     std::vector<double> values{
         data.open,
@@ -33,14 +33,11 @@ void RollingWindowScaler::add(const PriceData& data){
     }
 }
 
-// returns the scaled values for the day
-// using a growing window normalisation, day 1 to day windowSize-1 get
-// normalised based on the data that has been seen so far
 std::vector<double> RollingWindowScaler::scaledValuesPerDay() const{
     std::vector<double> scaled(numFeatures, 0.0);
 
     for(size_t i = 0; i < numFeatures; i++){
-        size_t n = rawValues[i].size();
+        size_t n = rawValues[i].size(); 
 
         if(n == 0){
             // for the first value as there is no data to compare
@@ -68,7 +65,6 @@ std::vector<double> RollingWindowScaler::scaledValuesPerDay() const{
     return scaled;
 }
 
-// clears all vector values
 void RollingWindowScaler::reset(){
     for(size_t i = 0; i < numFeatures; i++){
         rawValues[i].clear();

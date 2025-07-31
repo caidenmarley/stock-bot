@@ -3,11 +3,6 @@
 #include <cstring>
 #include <fstream>
 
-
-/*  numFeatures: num columns on csv being fed as inputs into lstm
- *  hiddenSize: size of weights matrices
- *  sequenceLength: how many days at a time to feed into network
- */ 
 LSTMCell::LSTMCell(int numFeatures, int hiddenSize, int sequenceLength)
     : numFeatures(numFeatures), hiddenSize(hiddenSize),
       Wf(hiddenSize, numFeatures), Uf(hiddenSize, hiddenSize), bf(Eigen::VectorXd::Constant(hiddenSize, 1.0)), // set to 1 so lstm doesnt forget at the start
@@ -41,8 +36,6 @@ LSTMCell::LSTMCell(int numFeatures, int hiddenSize, int sequenceLength)
     stepData.reserve(sequenceLength);
 }
 
-// For each weight draw a rngom value from a normal distribution with mean 0 and
-// standard deviation = sqrt(2/(numInputs + numOutputs))
 void LSTMCell::xavierWeightsInit() {
     // static prevents reinitialsing mt19937 again (expensive time cost)
     static std::mt19937 rng(std::random_device {}());
@@ -120,11 +113,9 @@ Eigen::VectorXd LSTMCell::forwardPass(const Eigen::VectorXd& input) {
     return this->hiddenState;
 }
 
-// delta_h = dL/dh_t
-// delta_c = dL/dc_t
-// deltaX = dL/dx - how a change in X affects the Loss
-// returns pair dh_t-1 and dc_t-1
 std::pair<Eigen::VectorXd, Eigen::VectorXd> LSTMCell::backwardPass(const Eigen::VectorXd& deltaH, const Eigen::VectorXd& deltaC) {
+    // NOTE deltaX = dL/dx - how a change in X affects the Loss
+
     const StepData& stepDataS = this->stepData.back();
 
     // 1. last forward step was h_t = o_t cwiseProd tanh(c_t)
@@ -229,7 +220,6 @@ size_t LSTMCell::getParameterCount() const{
     return this->parameterCount;
 }
 
-// clears hiddenState, cellState and stepData
 void LSTMCell::reset(){
     this->hiddenState.setZero();
     this->cellState.setZero();
@@ -361,7 +351,6 @@ void LSTMCell::setParametersVector(const Eigen::VectorXd& v) {
 }
 
 void LSTMCell::zeroGrad() {
-    // reset all gradient accumulators (deltaW*, deltaU*, deltaB*) to zero
     deltaWf.setZero(); deltaUf.setZero(); deltaBf.setZero();
     deltaWi.setZero(); deltaUi.setZero(); deltaBi.setZero();
     deltaWc.setZero(); deltaUc.setZero(); deltaBc.setZero();
