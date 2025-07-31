@@ -6,11 +6,17 @@
 #include "model/lstm.h"
 #include "inputs/shape_inputs.h"
 
+struct TrainingResult{
+    double bestValLoss;
+    int epochOfBestValLoss;
+    int totalEpochs;
+};
+
 class Trainer{
 public:
     Trainer(int numFeatures, int hiddenSize, int sequenceLength, int batchSize, double learningRate, double delta,
         size_t windowSize, const std::vector<PriceData>& rawTrainingData, const std::vector<PriceData>& rawValidationData);
-    void run(const int epochs);
+    TrainingResult run(const int epochs, double stoppingToleranceLoss, int maxEpochsWithNoImprovement);
 private:
     LSTMCell lstm;
     Dense outputLayer;

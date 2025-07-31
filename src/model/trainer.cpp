@@ -10,7 +10,11 @@ size_t windowSize, const std::vector<PriceData>& rawTrainingData, const std::vec
     trainingData(rawTrainingData, numFeatures, sequenceLength, batchSize, windowSize), 
     validationData(rawValidationData, numFeatures, sequenceLength, batchSize, windowSize){}
 
-void Trainer::run(const int epochs){
+TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int maxEpochsWithNoImprovement){
+    double bestValLoss = 1000000;
+    int bestEpoch = 0;
+    int noImproveCount = 0;
+
     for(int epoch = 1; epoch <= epochs; epoch++){
         // TRAINING
         // reset trainingData position index, so batches start from the beginning
@@ -128,10 +132,27 @@ void Trainer::run(const int epochs){
             avgValidationLoss = 0.0;
         }
 
+        // has validation improved by at least the tolerance
+        if(avgValidationLoss + stoppingToleranceLoss < bestValLoss){
+            bestValLoss = avgValidationLoss;
+            bestEpoch = epoch;
+            noImproveCount = 0;
+        }else{
+            ++noImproveCount;
+            if(noImproveCount >= maxEpochsWithNoImprovement){
+                std::cout << "stopping early at epoch " << epoch << ", best val loss = " << bestValLoss << " at epoch " << bestEpoch << std::endl;
+                return {bestValLoss, bestEpoch, epoch};
+            }
+        }
+
         std::cout << "Epoch " << epoch
             << " | train loss: " << std::fixed << std::setprecision(6)
             << avgTrainingLoss
             << " | val  loss: " << std::fixed << std::setprecision(6)
-            << avgValidationLoss << "\n";
+            << avgValidationLoss 
+            << " | best val: " << std::fixed << std::setprecision(6)
+            << bestValLoss << " at epoch " << bestEpoch << std::endl;
     }
+
+    return {bestValLoss, bestEpoch, epochs};
 }
