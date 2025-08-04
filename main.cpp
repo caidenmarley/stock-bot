@@ -5,7 +5,9 @@
 #include "model/huber_loss_function.h"
 #include "model/dense.h"
 #include "model/trainer.h"
+#include "search/hyperparam_search.h"
 #include <iostream>
+#include <vector>
 
 int main(int argc, char* argv[]) {
     try {
@@ -15,10 +17,10 @@ int main(int argc, char* argv[]) {
         int sequenceLength = 20; // number of days per sequence
         int batchSize = 10; // number of sequences per batch
         double learningRate = 1e-4;
-        double windowSize = 256; // number of days in each scaler window
+        size_t windowSize = 256; // number of days in each scaler window
         double delta = 1.0; // huber loss delta value
         int epochs = 10;
-        double stoppingToleranceLoss = 1e-3;
+        double stoppingToleranceLoss = 1e-4;
         int maxEpochsWithNoImprovement = 3;
 
         for(int i = 1; i < argc; ++i) {
@@ -56,19 +58,44 @@ int main(int argc, char* argv[]) {
         std::vector<PriceData> trainingData(rawData.begin(), rawData.begin() + (splitStart + sequenceLength));
         std::vector<PriceData> validationData(rawData.begin() + splitStart, rawData.end());
 
-        Trainer trainer(
+        std::vector<HyperParam> params = {
+            {"hiddenSize",     ParamType::INTEGER, {16,   32,   64  }},
+            {"sequenceLength", ParamType::INTEGER, {10,   20,   40  }},
+            {"batchSize",      ParamType::INTEGER, {16,   32,   64  }},
+            {"learningRate",   ParamType::DOUBLE,  {1e-3, 1e-4, 1e-5}},
+            {"windowSize",   ParamType::INTEGER,  {64, 128, 256}},
+            {"delta",          ParamType::DOUBLE,  {0.5,  1.0,  2.0}}
+        };
+
+        gridSearch(
+            params,
             numFeatures,
             hiddenSize,
             sequenceLength,
-            batchSize, 
+            batchSize,
             learningRate,
             delta,
             windowSize,
             trainingData,
-            validationData
+            validationData,
+            epochs,
+            stoppingToleranceLoss,
+            maxEpochsWithNoImprovement
         );
 
-        trainer.run(epochs, stoppingToleranceLoss, maxEpochsWithNoImprovement);
+        // Trainer trainer(
+        //     numFeatures,
+        //     hiddenSize,
+        //     sequenceLength,
+        //     batchSize, 
+        //     learningRate,
+        //     delta,
+        //     windowSize,
+        //     trainingData,
+        //     validationData
+        // );
+
+        // trainer.run(epochs, stoppingToleranceLoss, maxEpochsWithNoImprovement);
 
     } catch (const std::exception& ex) {
         std::cerr << "Error: " << ex.what() << std::endl;

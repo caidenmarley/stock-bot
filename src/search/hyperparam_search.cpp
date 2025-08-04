@@ -1,6 +1,7 @@
 #include "search/hyperparam_search.h"
 #include <unordered_map>
 #include <iostream>
+#include <fstream>
 
 void gridSearch(
     const std::vector<HyperParam>& params,
@@ -17,6 +18,15 @@ void gridSearch(
     double stoppingToleranceLoss, 
     int maxEpochsWithNoImprovement
 ){
+    std::ofstream csv("data/results.csv");
+    csv << "hiddenSize,sequenceLength,batchSize,learningRate,delta,windowSize"
+           ",bestValLoss,epochOfBestValLoss,totalEpochs\n";
+
+    std::unordered_map<std::string, double> bestHashmap;
+    double globalBestLoss = 10000000;
+    TrainingResult bestResult{globalBestLoss,0,0};
+
+
     // each element corresponds to the index into the "values" vector in the corresponding HyperParam struct
     std::vector<size_t> indexs(params.size(), 0);
     bool done = false;
@@ -56,14 +66,30 @@ void gridSearch(
 
         TrainingResult result = trainer.run(epochs, stoppingToleranceLoss, maxEpochsWithNoImprovement);
 
-        std::cout << "---------------------------------------" << std::endl;
-        for(auto& m: hashmap){
-            std::cout << m.first << " = " << m.second << std::endl; 
+        csv << testHiddenSize    << ','
+            << testSequenceLength<< ','
+            << testBatchSize     << ','
+            << testLearningRate  << ','
+            << testDelta         << ','
+            << testWindowSize    << ','
+            << result.bestValLoss       << ','
+            << result.epochOfBestValLoss<< ','
+            << result.totalEpochs       << "\n";
+
+        // std::cout << "---------------------------------------" << std::endl;
+        // for(auto& m: hashmap){
+        //     std::cout << m.first << " = " << m.second << std::endl; 
+        // }
+        // std::cout << "bestValLoss = " << result.bestValLoss
+        //           << " at epoch " << result.epochOfBestValLoss
+        //           << ", total epochs = " << result.totalEpochs
+        //           << std::endl;
+
+        if (result.bestValLoss < globalBestLoss) {
+            globalBestLoss = result.bestValLoss;
+            bestHashmap = hashmap;
+            bestResult = result;
         }
-        std::cout << "bestValLoss = " << result.bestValLoss
-                  << " at epoch " << result.epochOfBestValLoss
-                  << ", total epochs = " << result.totalEpochs
-                  << std::endl;
 
         // work from the outside in{X,Y,Z}, Z to X Z lsb, cycling through all possible values
         for(int i = int(params.size())-1; i >=0; --i){
@@ -80,4 +106,13 @@ void gridSearch(
             }
         }
     }
+    csv.close();
+    std::cout << "\n=== Grid Search Complete ===\n"
+              << "Best validation loss: " << bestResult.bestValLoss
+              << " at epoch "  << bestResult.epochOfBestValLoss
+              << " (ran "     << bestResult.totalEpochs << " epochs)\n"
+              << "Best hyperparameters:\n";
+    for (auto& p : bestHashmap)
+        std::cout << "  " << p.first << " = " << p.second << "\n";
+    std::cout << "Results saved to results.csv\n";
 }
