@@ -22,6 +22,9 @@ public:
      * @param gradients the calculated gradients from the backwards pass
      */
     void update(Eigen::VectorXd& params, const Eigen::VectorXd& gradients);
+
+    double getLearningRate() const { return learningRate; }
+    void setLearningRate(double lr) { learningRate = lr; }
 private:
     double learningRate;
     double b1, b2;

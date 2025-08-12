@@ -12,6 +12,10 @@ void gridSearch(
     double learningRate, 
     double delta,
     size_t windowSize, 
+    double maxNorm,
+    double decayFactor,
+    double minLR,
+    int lrDecayMaxTries,
     const std::vector<PriceData>& rawTrainingData, 
     const std::vector<PriceData>& rawValidationData,
     int epochs,
@@ -60,6 +64,10 @@ void gridSearch(
             testLearningRate,
             testDelta,
             testWindowSize,
+            maxNorm,
+            decayFactor,
+            minLR,
+            lrDecayMaxTries,
             rawTrainingData,
             rawValidationData
         );

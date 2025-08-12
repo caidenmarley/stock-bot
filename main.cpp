@@ -18,10 +18,14 @@ int main(int argc, char* argv[]) {
         int hiddenSize = 32;  // dimension of lstm matrices
         int sequenceLength = 20; // number of days per sequence
         int batchSize = 10; // number of sequences per batch
-        double learningRate = 1e-4;
+        double learningRate = 1e-3;
         size_t windowSize = 256; // number of days in each scaler window
+        double maxNorm = 0.001;
+        double decayFactor = 0.5; // learning rate halves at each plateau
+        double minLR = 1e-6; // minimum learning rate
+        int lrDecayMaxTries = 3; // gives up after 3 decays
         double delta = 1.0; // huber loss delta value
-        int epochs = 10;
+        int epochs = 30;
         double stoppingToleranceLoss = 1e-4;
         int maxEpochsWithNoImprovement = 3;
 
@@ -79,6 +83,10 @@ int main(int argc, char* argv[]) {
                 learningRate,
                 delta,
                 windowSize,
+                maxNorm,
+                decayFactor,
+                minLR,
+                lrDecayMaxTries,
                 trainingData,
                 validationData,
                 epochs,
@@ -94,6 +102,10 @@ int main(int argc, char* argv[]) {
                 learningRate,
                 delta,
                 windowSize,
+                maxNorm,
+                decayFactor,
+                minLR,
+                lrDecayMaxTries,
                 trainingData,
                 validationData
             );

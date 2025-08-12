@@ -1,12 +1,15 @@
 #include "model/trainer.h"
 #include <iostream>
 #include <iomanip>
+#include <cmath>
 
 Trainer::Trainer(int numFeatures, int hiddenSize, int sequenceLength, int batchSize, double learningRate, double delta,
-size_t windowSize, const std::vector<PriceData>& rawTrainingData, const std::vector<PriceData>& rawValidationData): 
+size_t windowSize, double maxNorm, double decayFactor, double minLR, int lrDecayMaxTries,
+const std::vector<PriceData>& rawTrainingData, const std::vector<PriceData>& rawValidationData): 
     lstm(numFeatures, hiddenSize, sequenceLength), outputLayer(hiddenSize), 
     optimiser(lstm.getParameterCount(), learningRate),  huberLoss(delta),
-    sequenceLength(sequenceLength), batchSize(batchSize), learningRate(learningRate), windowSize(windowSize),
+    sequenceLength(sequenceLength), batchSize(batchSize), learningRate(learningRate), windowSize(windowSize), 
+    maxNorm(maxNorm), decayFactor(decayFactor), minLR(minLR), lrDecayMaxTries(lrDecayMaxTries),
     trainingData(rawTrainingData, numFeatures, sequenceLength, batchSize, windowSize), 
     validationData(rawValidationData, numFeatures, sequenceLength, batchSize, windowSize){}
 
@@ -20,7 +23,7 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
         // reset trainingData position index, so batches start from the beginning
         trainingData.reset();
         double trainingLoss = 0.0;  // accumulator for training loss
-        int trainingBatchCount = 0; // num batches processed
+        size_t trainingExamples = 0;
 
         // loop over all batches
         while(trainingData.hasAnotherBatch()){
@@ -54,6 +57,7 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
                 double dLdy = gradient(0);
 
                 trainingLoss += loss;
+                ++trainingExamples;
 
                 // back pass through dense layer
                 outputLayer.backward(hiddenState, dLdy);
@@ -77,28 +81,28 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
             {
                 Eigen::VectorXd params = lstm.getParametersVector();
                 Eigen::VectorXd gradients = lstm.getGradientsVector();
+                clipGlobalNorm(gradients, maxNorm);
                 optimiser.update(params, gradients);
                 lstm.setParametersVector(params);
             }
 
             // Dense layer: using SGD on W and b
+            double norm = std::sqrt(outputLayer.dW.squaredNorm() + outputLayer.db * outputLayer.db);
+            if (norm > maxNorm && norm > 0.0) {
+                double scale = maxNorm / norm;
+                outputLayer.dW *= scale;
+                outputLayer.db *= scale;
+            }
             outputLayer.W -= learningRate * outputLayer.dW;
             outputLayer.b -= learningRate * outputLayer.db;
-
-            trainingBatchCount++;
         }
 
-        double avgTrainingLoss{};
-        if(trainingBatchCount > 0){
-            avgTrainingLoss = trainingLoss/trainingBatchCount;
-        }else{
-            avgTrainingLoss = 0.0;
-        }
+        double avgTrainingLoss = trainingExamples ? trainingLoss / double(trainingExamples) : 0.0;
 
         // VALIDATION - measures how the model does with the weights and bias it just worked out in training
         validationData.reset();
-        double validationLoss{};
-        int validationBatchCount{};
+        double validationLoss = 0.0;
+        size_t validationExamples = 0;
 
         while(validationData.hasAnotherBatch()){
             auto [inputBatch, targetBatch] = validationData.nextBatch();
@@ -117,16 +121,11 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
                 double targetPrediction = outputLayer.forward(hiddenState);
 
                 validationLoss += huberLoss.forward(targetPrediction, targetBatch(i));
+                ++validationExamples;
             }
-            validationBatchCount++;
         }
 
-        double avgValidationLoss{};
-        if(validationBatchCount > 0){
-            avgValidationLoss = validationLoss/validationBatchCount;
-        }else{
-            avgValidationLoss = 0.0;
-        }
+        double avgValidationLoss = validationExamples ? validationLoss / double(validationExamples) : 0.0;
 
         // has validation improved by at least the tolerance
         if(avgValidationLoss + stoppingToleranceLoss < bestValLoss){
@@ -136,8 +135,19 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
         }else{
             ++noImproveCount;
             if(noImproveCount >= maxEpochsWithNoImprovement){
-                std::cout << "stopping early at epoch " << epoch << ", best val loss = " << bestValLoss << " at epoch " << bestEpoch << std::endl;
-                return {bestValLoss, bestEpoch, epoch};
+                double opLR = optimiser.getLearningRate();
+                if(lrDecayMaxTries > 0 && opLR > minLR){
+                    opLR = std::max(minLR, opLR * decayFactor);
+                    optimiser.setLearningRate(opLR);
+                    learningRate = std::max(minLR ,learningRate * decayFactor); // for Dense layer
+                    --lrDecayMaxTries;
+                    noImproveCount = 0;
+                    std::cout << "[LR-plateau] decayed LR to " << opLR
+                      << " (dense lr " << learningRate << "), tries left " << lrDecayMaxTries << "\n";
+                }else{
+                    std::cout << "stopping early at epoch " << epoch << ", best val loss = " << bestValLoss << " at epoch " << bestEpoch << std::endl;
+                    return {bestValLoss, bestEpoch, epoch};
+                }
             }
         }
 
