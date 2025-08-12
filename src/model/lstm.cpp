@@ -337,10 +337,8 @@ Eigen::VectorXd& LSTMCell::getGradientsVector(){
 void LSTMCell::setParametersVector(const Eigen::VectorXd& v) {
     size_t offset = 0;
     auto setMat = [&](auto& M) {
-        const size_t sz = M.size();
-        Eigen::Map<const Eigen::VectorXd> segment(v.data() + offset, sz);
-        Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(M.data(), M.rows(), M.cols()) = 
-            Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(segment.data(), M.rows(), M.cols());
+        const size_t sz = static_cast<size_t>(M.size());
+        std::memcpy(M.data(), v.data() + offset, sizeof(double)*sz);
         offset += sz;
     };
     // Weights and biases (same order as getParametersVector)

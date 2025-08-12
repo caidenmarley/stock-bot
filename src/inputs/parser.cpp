@@ -43,15 +43,19 @@ void CSVLoader::parseBuffer() {
     char* end = buffer.data() + buffer.size(); // ptr to end of buffer
 
 
-    /*THIS COULD BE DONE WITH std::memchr or std::find*/
+    /*TODO THIS COULD BE DONE WITH std::memchr or std::find*/
     // skip header
-    while (ptr < end && *ptr != '\n') {
+    while (ptr < end && *ptr != '\n' && *ptr != '\r') {
         ++ptr;
     }
 
     // move ahead of \n
     if (ptr < end) {
-        ++ptr;
+        char eol = *ptr++;
+        if(ptr < end && ((eol == '\r' && *ptr == '\n') || (eol == '\n' && *ptr == '\r'))){
+            // protects against \r\n or \n\r
+            ptr++;
+        }
     }
 
     // preallocate large chunk to avoid repeated reallocations
@@ -64,11 +68,23 @@ void CSVLoader::parseBuffer() {
         char* fieldStart = ptr;
 
         // moves ptr forward until it finds comma or newline
-        while (ptr < end && *ptr != ',' && *ptr != '\n') {
+        while (ptr < end && *ptr != ',' && *ptr != '\n' && *ptr != '\r') {
             ++ptr;
         }
+
         // creates string view of the date
         row.date = std::string_view(fieldStart, ptr - fieldStart);
+
+        // if there is a blank line, skip it
+        if(row.date.size() == 0){
+            if (ptr < end && (*ptr == '\n' || *ptr == '\r')) {
+                char eol = *ptr++;
+                if (ptr < end && ((eol == '\r' && *ptr == '\n') || (eol == '\n' && *ptr == '\r'))) {
+                    ++ptr;
+                }
+            }
+            continue; // try the next line
+        }
 
         parseNext(ptr, end, row.open);
         parseNext(ptr, end, row.high);
@@ -78,13 +94,16 @@ void CSVLoader::parseBuffer() {
         parseNext(ptr, end, row.volume);
 
         // move to next line
-        while (ptr < end && *ptr != '\n') {
+        while (ptr < end && *ptr != '\n' && *ptr != '\r') {
             ++ptr;
         }
 
         // move past newline
         if (ptr < end) {
-            ++ptr;
+            char eol = *ptr++;
+            if (ptr < end && ((eol == '\r' && *ptr == '\n') || (eol == '\n' && *ptr == '\r'))) {
+                ++ptr;
+            }
         }
 
         data.push_back(row);

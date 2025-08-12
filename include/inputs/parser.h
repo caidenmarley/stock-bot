@@ -66,8 +66,9 @@ class CSVLoader {
         }
         if (*ptr == ',') ++ptr;
         char* start = ptr;
-        while (ptr < end && *ptr != ',' && *ptr != '\n')
+        while (ptr < end && *ptr != ',' && *ptr != '\n' && *ptr != '\r'){
             ++ptr;
+        } 
         // conv string into num type without copying or allocating
         auto res = std::from_chars(start, ptr, dest);
         if (res.ec != std::errc()) {

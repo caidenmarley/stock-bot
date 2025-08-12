@@ -71,10 +71,6 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
                     // tie assigns the first var in the pair to the first var in the tie, then second to second
                     // dLdhNext = lstm.backwardPass().first, dLdcNext = lstm.backwardPass().second 
                     std::tie(dLdhNext, dLdcNext) = lstm.backwardPass(dLdhNext, dLdcNext);
-
-                    // the external dLdhNext is 0 as you dont want the output layer gradient to affect anything other than
-                    // the first step of the back pass, dLdh prev is still calculated internally in the backpass method
-                    dLdhNext.setZero();
                 }
             }
             // scope for optimiser variables
