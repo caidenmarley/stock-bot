@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <string_view>
 #include <vector>
+#include <cstdint>
 
 #define DATASET_SIZE 1000000
 
