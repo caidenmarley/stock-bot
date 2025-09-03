@@ -14,14 +14,16 @@ endif()
 
 include_directories(include)
 
-file(GLOB_RECURSE SRC_FILES
-    src/**/*.cpp
+file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
+    src/*/*.cpp
 )
+
+# message("${SRC_FILES}")
 
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 # create main exe, cmake --build build --target stock_bot
-add_executable(stock_bot main.cpp ${SRC_FILES})
+add_executable(stock_bot src/main.cpp ${SRC_FILES})
 # create testbed exe, cmake --build build --target testbed
 add_executable(testbed tests/testbed.cpp ${SRC_FILES})
