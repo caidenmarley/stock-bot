@@ -1,0 +1,31 @@
+IndentWidth: 4
+DerivePointerAlignment: false
+PointerAlignment: Left
+UseTab: Never
+AllowShortFunctionsOnASingleLine: Empty
+AlignAfterOpenBracket: BlockIndent
+AlignEscapedNewlines: LeftWithLastLine
+AllowShortBlocksOnASingleLine: Empty
+AllowShortEnumsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLambdasOnASingleLine: All
+BitFieldColonSpacing: Both
+BreakBeforeBraces: Attach
+Cpp11BracedListStyle: true
+KeepEmptyLines:
+  AtEndOfFile: false
+  AtStartOfBlock: false
+  AtStartOfFile: false
+MaxEmptyLinesToKeep: 1
+QualifierAlignment: Left
+RemoveParentheses: ReturnStatement
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+BinPackArguments: false
+BreakTemplateDeclarations: Yes
