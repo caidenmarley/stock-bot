@@ -21,6 +21,11 @@ file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
 # message("${SRC_FILES}")
 
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+
+if(NOT TARGET Eigen3::Eigen)
+	add_subdirectory(eigen)
+endif()
+
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 # create main exe, cmake --build build --target stock_bot
