@@ -36,7 +36,22 @@ if(NOT TARGET Eigen3::Eigen)
 	find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 endif()
 
-include_directories(${EIGEN3_INCLUDE_DIR})
+find_package(fmt QUIET)
+
+if(NOT fmt::fmt)
+	FetchContent_Declare(
+    	fmt
+    	GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+    	GIT_TAG 11.0.2 # pick a release
+	)
+	FetchContent_MakeAvailable(fmt)
+endif()
+
+
+# include_directories(${EIGEN3_INCLUDE_DIR})
+
+link_libraries(PRIVATE fmt::fmt)
+link_libraries(Eigen3::Eigen)
 
 # create main exe, cmake --build build --target stock_bot
 add_executable(stock_bot src/main.cpp ${SRC_FILES})
