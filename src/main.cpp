@@ -1,9 +1,9 @@
 #include "inputs/parser.h"
 #include "model/trainer.h"
 #include "search/hyperparam_search.h"
+#include <cstdio>
 #include <cxxopts.hpp>
 #include <fmt/base.h>
-#include <iostream>
 #include <vector>
 
 auto main(int argc, char* argv[]) -> int {
@@ -44,33 +44,6 @@ auto main(int argc, char* argv[]) -> int {
         maxEpochsWithNoImprovement = result["early-stop-patience"].as<int>();
         epochs = result["epochs"].as<int>();
         test = result["test"].as<bool>();
-
-        // for (int i = 1; i < argc; ++i) {
-        //     std::string arg = argv[i];
-        //     if (arg == "--epochs" && i + 1 < argc) {
-        //         epochs = std::stoi(argv[++i]);
-        //     } else if (arg == "--early-stop-eps" && i + 1 < argc) {
-        //         stoppingToleranceLoss = std::stod(argv[++i]);
-        //     } else if (arg == "--early-stop-patience" && i + 1 < argc) {
-        //         maxEpochsWithNoImprovement = std::stoi(argv[++i]);
-        //     } else if (arg == "--test") {
-        //         test = true;
-        //     } else if (arg == "--help") {
-        //         std::cout << "Usage: " << argv[0] << " [options]\n"
-        //                   << "Options:\n"
-        //                   << "  --epochs N                     Train up to N
-        //                   "
-        //                      "epochs (default 10)\n"
-        //                   << "  --early-stop-eps X             Early-stop
-        //                   tol. "
-        //                      "(default 1e-3)\n"
-        //                   << "  --early-stop-patience P        Early-stop "
-        //                      "patience (default 3)\n"
-        //                   << "  --test                         Run "
-        //                      "hyperparameter search\n";
-        //         return 0;
-        //     }
-        // }
 
         // load data
         const std::string csvPath = "data/AAAU.csv";
@@ -142,7 +115,7 @@ auto main(int argc, char* argv[]) -> int {
         }
 
     } catch (const std::exception& ex) {
-        std::cerr << "Error: " << ex.what() << std::endl;
+        fmt::println(stderr, "Error: {}", ex.what());
         return 1;
     }
 }
