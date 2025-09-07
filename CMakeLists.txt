@@ -54,7 +54,7 @@ endif()
 
 # include_directories(${EIGEN3_INCLUDE_DIR})
 
-link_libraries(PRIVATE fmt::fmt)
+link_libraries(fmt::fmt)
 link_libraries(Eigen3::Eigen)
 link_libraries(cxxopts::cxxopts)
 
