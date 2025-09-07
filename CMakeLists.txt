@@ -21,7 +21,6 @@ file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
 )
 
 find_package(Eigen3 3.3 QUIET NO_MODULE)
-
 # fetch eigen if it is not installed
 if(NOT TARGET Eigen3::Eigen)
 	FetchContent_Declare(
@@ -30,28 +29,34 @@ if(NOT TARGET Eigen3::Eigen)
 		GIT_TAG        c3f9707824a97ad04fa45bd446610ee5341bf077
 		OVERRIDE_FIND_PACKAGE
 	)
-
 	FetchContent_MakeAvailable(Eigen3)
-
-	find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 endif()
 
 find_package(fmt QUIET)
-
-if(NOT fmt::fmt)
+if(NOT TARGET fmt::fmt)
 	FetchContent_Declare(
     	fmt
     	GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-    	GIT_TAG 11.0.2 # pick a release
+    	GIT_TAG 11.0.2 
 	)
 	FetchContent_MakeAvailable(fmt)
 endif()
 
+find_package(cxxopts QUIET)
+if(NOT TARGET cxxopts::cxxopts)
+	FetchContent_Declare(
+    	cxxopts
+    	GIT_REPOSITORY https://github.com/jarro2783/cxxopts
+    	GIT_TAG v3.3.1
+	)
+	FetchContent_MakeAvailable(cxxopts)
+endif()
 
 # include_directories(${EIGEN3_INCLUDE_DIR})
 
 link_libraries(PRIVATE fmt::fmt)
 link_libraries(Eigen3::Eigen)
+link_libraries(cxxopts::cxxopts)
 
 # create main exe, cmake --build build --target stock_bot
 add_executable(stock_bot src/main.cpp ${SRC_FILES})
