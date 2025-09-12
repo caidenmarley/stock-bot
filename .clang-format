@@ -29,3 +29,4 @@ SpaceBeforeSquareBrackets: false
 SpaceInEmptyBlock: false
 BinPackArguments: false
 BreakTemplateDeclarations: Yes
+ColumnLimit: 0

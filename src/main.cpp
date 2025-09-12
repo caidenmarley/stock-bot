@@ -6,7 +6,7 @@
 #include <fmt/base.h>
 #include <vector>
 
-auto main(int argc, char* argv[]) -> int {
+int main(int argc, char* argv[]) {
     try {
         bool test;
 
@@ -27,12 +27,7 @@ auto main(int argc, char* argv[]) -> int {
         int maxEpochsWithNoImprovement;
 
         cxxopts::Options options {"Stock Bot", ""};
-        options.add_options()
-			("e,epochs", "Train up to N epochs", cxxopts::value<int>()->default_value("30"))
-			("early-stop-eps", "Early stop tol", cxxopts::value<double>()->default_value("1e-4"))
-			("early-stop-patience", "Early stop patience", cxxopts::value<int>()->default_value("3"))
-			("t,test", "Run hyperparameter search")
-			("h,help", "Print usage");
+        options.add_options()("e,epochs", "Train up to N epochs", cxxopts::value<int>()->default_value("30"))("early-stop-eps", "Early stop tol", cxxopts::value<double>()->default_value("1e-4"))("early-stop-patience", "Early stop patience", cxxopts::value<int>()->default_value("3"))("t,test", "Run hyperparameter search")("h,help", "Print usage");
         auto result = options.parse(argc, argv);
 
         if (result.contains("help")) {
