@@ -31,12 +31,15 @@ class StockData {
     }
 
     /**
-     * Returns the next batch as a pairzero copy tensor slices, 
+     * Returns the next batch as a pair, zero copy tensor slices, 
      * splitting into inputs [currentBatch, sequenceLength, numFeatures], and targets [currentBatch]
      * 
      * @return std::pair, input batch and target batch
      */
-    std::pair<Eigen::Tensor<double, 3, Eigen::RowMajor>, Eigen::VectorXd> nextBatch();
+    std::pair<
+      Eigen::TensorMap< const Eigen::Tensor<double, 3, Eigen::RowMajor>>, 
+      Eigen::Map<const Eigen::VectorXd>
+    > nextBatch();
 
     // reset the postion index so batches start from the beginning again
     void reset() {

@@ -67,7 +67,11 @@ StockData::StockData(const std::vector<PriceData>& rawData, size_t numFeatures, 
     }
 }
 
-std::pair<Eigen::Tensor<double, 3, Eigen::RowMajor>, Eigen::VectorXd> StockData::nextBatch() {
+std::pair<
+    Eigen::TensorMap< const Eigen::Tensor<double, 3, Eigen::RowMajor>>, 
+    Eigen::Map<const Eigen::VectorXd>
+>
+StockData::nextBatch() {
     if (!hasAnotherBatch()) {
         throw std::out_of_range("No more batches; call reset() to start a new epoch");
     }
@@ -78,20 +82,50 @@ std::pair<Eigen::Tensor<double, 3, Eigen::RowMajor>, Eigen::VectorXd> StockData:
     const size_t currentBatch = end - start;
 
     // ptr to inputs.data() at start of sequence
-    double* dataPtr = inputs.data() + start * sequenceLength * numFeatures;
+    double* inputsPtr = inputs.data() + start * sequenceLength * numFeatures;
 
     // treat existing memory as tensor without copying
-    Eigen::TensorMap<Eigen::Tensor<double, 3, Eigen::RowMajor>> inputBatch(
-        dataPtr,
+    Eigen::TensorMap<const Eigen::Tensor<double, 3, Eigen::RowMajor>> inputBatch(
+        inputsPtr,
         static_cast<long>(currentBatch),
         static_cast<long>(this->sequenceLength),
         static_cast<long>(this->numFeatures)
     );
 
-    // treat existing memory as vector without copying
-    Eigen::VectorBlock<Eigen::VectorXd> targetBatch = targets.segment(static_cast<long>(start), static_cast<long>(currentBatch));
+    double* targetsPtr = targets.data() + static_cast<long>(start);
+
+    Eigen::Map<const Eigen::VectorXd> targetBatch(targetsPtr, static_cast<long>(currentBatch));
 
     // move index to start of next batch as current batch spans from start->end-1
     positionIndex = end;
     return {inputBatch, targetBatch};
 }
+
+// std::pair<Eigen::Tensor<double, 3, Eigen::RowMajor>, Eigen::VectorXd> StockData::nextBatch() {
+//     if (!hasAnotherBatch()) {
+//         throw std::out_of_range("No more batches; call reset() to start a new epoch");
+//     }
+
+//     // batch range
+//     const size_t start = positionIndex; // where in main matrix does batch begin
+//     const size_t end = std::min(positionIndex + batchSize, numSequences);
+//     const size_t currentBatch = end - start;
+
+//     // ptr to inputs.data() at start of sequence
+//     double* dataPtr = inputs.data() + start * sequenceLength * numFeatures;
+
+//     // treat existing memory as tensor without copying
+//     Eigen::TensorMap<Eigen::Tensor<double, 3, Eigen::RowMajor>> inputBatch(
+//         dataPtr,
+//         static_cast<long>(currentBatch),
+//         static_cast<long>(this->sequenceLength),
+//         static_cast<long>(this->numFeatures)
+//     );
+
+//     // treat existing memory as vector without copying
+//     Eigen::VectorBlock<Eigen::VectorXd> targetBatch = targets.segment(static_cast<long>(start), static_cast<long>(currentBatch));
+
+//     // move index to start of next batch as current batch spans from start->end-1
+//     positionIndex = end;
+//     return {inputBatch, targetBatch};
+// }

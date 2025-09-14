@@ -43,8 +43,8 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
                 for(int j = 0; j < sequenceLength; j++){
                     // use a map to point at a slice of the already allocated batch tensor without creating new copies
                     // gets the feature vector for the ith sequence at time j
-                    double* ptr = inputBatch.data() + ((i*sequenceLength + j) * trainingData.getNumFeatures());
-                    Eigen::Map<Eigen::VectorXd> inputs(ptr, trainingData.getNumFeatures());
+                    const double* ptr = inputBatch.data() + ((i*sequenceLength + j) * trainingData.getNumFeatures());
+                    Eigen::Map<const Eigen::VectorXd> inputs(ptr, trainingData.getNumFeatures());
 
                     // single lstm step
                     hiddenState = lstm.forwardPass(inputs);
@@ -112,8 +112,8 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
                 lstm.reset();   // clear prev states
                 Eigen::VectorXd hiddenState;
                 for (int j = 0; j < sequenceLength; j++){
-                    double* ptr = inputBatch.data() + ((i*sequenceLength + j) * validationData.getNumFeatures());
-                    Eigen::Map<Eigen::VectorXd> inputs(ptr, validationData.getNumFeatures());
+                    const double* ptr = inputBatch.data() + ((i*sequenceLength + j) * validationData.getNumFeatures());
+                    Eigen::Map<const Eigen::VectorXd> inputs(ptr, validationData.getNumFeatures());
 
                     hiddenState = lstm.forwardPass(inputs);
                 }
