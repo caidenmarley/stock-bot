@@ -9,14 +9,34 @@
 #include <iostream>
 #include <vector>
 
+// struct TrainerParams{
+//     // hyperparameters
+//     int numFeatures = 6;
+//     int hiddenSize = 64;  // dimension of lstm matrices
+//     int sequenceLength = 15; // number of days per sequence
+//     int batchSize = 10; // number of sequences per batch
+//     double learningRate = 1e-3;
+//     size_t windowSize = 256; // number of days in each scaler window
+//     double maxNorm = 0.001;
+//     double decayFactor = 0.5; // learning rate halves at each plateau
+//     double minLR = 1e-6; // minimum learning rate
+//     int lrDecayMaxTries = 3; // gives up after 3 decays
+//     double delta = 1.0; // huber loss delta value
+//     int epochs = 30;
+//     double stoppingToleranceLoss = 1e-4;
+//     int maxEpochsWithNoImprovement = 3;
+// };
+
 int main(int argc, char* argv[]) {
     try {
-        bool test = false;
+        //bool test = false;
+
+        // TrainerParams trainerParams;
 
         // hyperparameters
         int numFeatures = 6;
-        int hiddenSize = 32;  // dimension of lstm matrices
-        int sequenceLength = 20; // number of days per sequence
+        int hiddenSize = 64;  // dimension of lstm matrices
+        int sequenceLength = 15; // number of days per sequence
         int batchSize = 10; // number of sequences per batch
         double learningRate = 1e-3;
         size_t windowSize = 256; // number of days in each scaler window
@@ -38,7 +58,7 @@ int main(int argc, char* argv[]) {
             }else if(arg == "--early-stop-patience" && i+1 < argc) {
                 maxEpochsWithNoImprovement = std::stoi(argv[++i]);
             }else if(arg == "--test"){
-                test = true;
+                //test = true;
             }else if(arg == "--help") {
                 std::cout
                   << "Usage: " << argv[0] << " [options]\n"
@@ -54,46 +74,46 @@ int main(int argc, char* argv[]) {
         // load data
         const std::string csvPath = "data/AAAU.csv";
         CSVLoader loader(csvPath);
-        const std::vector<PriceData> rawData = loader.getData();
+        const std::vector<PriceData>& rawData = loader.getData();
         std::cout << "parsed " << rawData.size() << " rows from CSV" << std::endl;
 
         // split data into 80/20 train/validation split
         int maxStartSequence = rawData.size() - sequenceLength;  
         int splitStart = 0.8*maxStartSequence;
         
-        std::vector<PriceData> trainingData(rawData.begin(), rawData.begin() + (splitStart + sequenceLength));
+        std::vector<PriceData> trainingData(rawData.begin(), rawData.begin() + splitStart);
         std::vector<PriceData> validationData(rawData.begin() + splitStart, rawData.end());
 
-        if(test){
-            std::vector<HyperParam> params = {
-                {"hiddenSize",     ParamType::INTEGER, {16,   32,   64  }},
-                {"sequenceLength", ParamType::INTEGER, {10,   20,   40  }},
-                {"batchSize",      ParamType::INTEGER, {16,   32,   64  }},
-                {"learningRate",   ParamType::DOUBLE,  {1e-3, 1e-4, 1e-5}},
-                {"windowSize",   ParamType::INTEGER,  {64, 128, 256}},
-                {"delta",          ParamType::DOUBLE,  {0.5,  1.0,  2.0}}
-            };
+        // if(test){
+        //     std::vector<HyperParam> params = {
+        //         {"hiddenSize",     ParamType::INTEGER, {16,   32,   64  }},
+        //         {"sequenceLength", ParamType::INTEGER, {10,   20,   40  }},
+        //         {"batchSize",      ParamType::INTEGER, {16,   32,   64  }},
+        //         {"learningRate",   ParamType::DOUBLE,  {1e-3, 1e-4, 1e-5}},
+        //         {"windowSize",   ParamType::INTEGER,  {64, 128, 256}},
+        //         {"delta",          ParamType::DOUBLE,  {0.5,  1.0,  2.0}}
+        //     };
     
-            gridSearch(
-                params,
-                numFeatures,
-                hiddenSize,
-                sequenceLength,
-                batchSize,
-                learningRate,
-                delta,
-                windowSize,
-                maxNorm,
-                decayFactor,
-                minLR,
-                lrDecayMaxTries,
-                trainingData,
-                validationData,
-                epochs,
-                stoppingToleranceLoss,
-                maxEpochsWithNoImprovement
-            );
-        }else{
+        //     gridSearch(
+        //         params,
+        //         numFeatures,
+        //         hiddenSize,
+        //         sequenceLength,
+        //         batchSize,
+        //         learningRate,
+        //         delta,
+        //         windowSize,
+        //         maxNorm,
+        //         decayFactor,
+        //         minLR,
+        //         lrDecayMaxTries,
+        //         trainingData,
+        //         validationData,
+        //         epochs,
+        //         stoppingToleranceLoss,
+        //         maxEpochsWithNoImprovement
+        //     );
+        // }else{
             Trainer trainer(
                 numFeatures,
                 hiddenSize,
@@ -111,7 +131,7 @@ int main(int argc, char* argv[]) {
             );
     
             trainer.run(epochs, stoppingToleranceLoss, maxEpochsWithNoImprovement);
-        }
+        // }
 
 
     } catch (const std::exception& ex) {
