@@ -46,8 +46,12 @@ int main(int argc, char* argv[]) {
         int lrDecayMaxTries = 3; // gives up after 3 decays
         double delta = 1.0; // huber loss delta value
         int epochs = 30;
-        double stoppingToleranceLoss = 1e-4;
+        double stoppingToleranceLoss = 1e-6;
         int maxEpochsWithNoImprovement = 3;
+
+        // for rng so you can compare changes
+        int seed = 0; // default
+        bool givenSeed = false;
 
         for(int i = 1; i < argc; ++i) {
             std::string arg = argv[i];
@@ -59,6 +63,9 @@ int main(int argc, char* argv[]) {
                 maxEpochsWithNoImprovement = std::stoi(argv[++i]);
             }else if(arg == "--test"){
                 //test = true;
+            }else if(arg == "--seed"){
+                seed = std::stoi(argv[++i]);
+                givenSeed = true;
             }else if(arg == "--help") {
                 std::cout
                   << "Usage: " << argv[0] << " [options]\n"
@@ -66,9 +73,14 @@ int main(int argc, char* argv[]) {
                   << "  --epochs N                     Train up to N epochs (default 10)\n"
                   << "  --early-stop-eps X             Early-stop tol. (default 1e-3)\n"
                   << "  --early-stop-patience P        Early-stop patience (default 3)\n"
+                  << "  --seed S                       Set RNG seed \n"
                   << "  --test                         Run hyperparameter search\n";
                 return 0;
             }
+        }
+
+        if(givenSeed){
+            LSTMCell::setGlobalInitSeed(seed);
         }
 
         // load data

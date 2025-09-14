@@ -93,6 +93,13 @@ class LSTMCell {
      */
     void loadParameters(const std::string& path);
 
+    /**
+     * Sets the rng seed for the model
+     * 
+     * @param seed seed to set to
+     */
+    static void setGlobalInitSeed(uint32_t seed);
+
   private:
     int numFeatures;
     int hiddenSize;
