@@ -17,7 +17,7 @@ void AdaBelief::update(Eigen::VectorXd& params, const Eigen::VectorXd& gradients
     // m_t = b_1*m_t-1 + (1-b_1)g_t
     this->m = b1*m + oneMinusb1*gradArr;
     
-    // s_t = b_2*s_t-1 + (1-b_2)(g_t-m_t)^2 + e
+    // s_t = b_2*s_t-1 + (1-b_2)(g_t-m_t)^2
     this->s = b2*s + oneMinusb2*(gradArr-m).square();
 
     // m_t / 1 - b_1^t
@@ -26,5 +26,6 @@ void AdaBelief::update(Eigen::VectorXd& params, const Eigen::VectorXd& gradients
     // s_t / 1 - b_2^t
     Eigen::ArrayXd sBiasCorrection = s / (1-b2Power);
 
+    // add e for denominator
     params.array() -= learningRate*mBiasCorrection / (sBiasCorrection.sqrt() + e);
 }

@@ -3,6 +3,8 @@
 #include <fstream>
 #include <iostream>
 
+// TODO stream based csv parsing remove need for buffer parse just into priceData structs
+
 CSVLoader::CSVLoader(const std::string& filename) {
     auto start = std::chrono::high_resolution_clock::now();
 
