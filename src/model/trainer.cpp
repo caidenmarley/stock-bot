@@ -2,6 +2,8 @@
 #include <iostream>
 #include <iomanip>
 #include <cmath>
+#include <fstream>
+#include <numeric>
 
 Trainer::Trainer(int numFeatures, int hiddenSize, int sequenceLength, int batchSize, double learningRate, double delta,
 size_t windowSize, double maxNorm, double decayFactor, double minLR, int lrDecayMaxTries,
@@ -104,6 +106,12 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
         double validationLoss = 0.0;
         size_t validationExamples = 0;
 
+        // collect predictions & targets (TODO CAN BE REMOVED LATER)
+        std::vector<double> valPreds;
+        std::vector<double> valTargets;
+        valPreds.reserve(10000);
+        valTargets.reserve(10000);
+
         while(validationData.hasAnotherBatch()){
             auto [inputBatch, targetBatch] = validationData.nextBatch();
             int currentBatch = targetBatch.size();
@@ -122,10 +130,27 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
 
                 validationLoss += huberLoss.forward(targetPrediction, targetBatch(i));
                 ++validationExamples;
+                
+                valPreds.push_back(targetPrediction);
+                valTargets.push_back(targetBatch(i));
             }
         }
 
         double avgValidationLoss = validationExamples ? validationLoss / double(validationExamples) : 0.0;
+
+        // --- extra validation metrics ---
+        double se = 0.0, ae = 0.0;
+        int correct = 0;
+        const int nval = static_cast<int>(valPreds.size());
+        for (int k = 0; k < nval; ++k) {
+            double e = valTargets[k] - valPreds[k];
+            se += e * e;
+            ae += std::abs(e);
+            if ((valPreds[k] >= 0.0) == (valTargets[k] >= 0.0)) ++correct;
+        }
+        double rmse = nval ? std::sqrt(se / nval) : 0.0;
+        double mae  = nval ? (ae / nval) : 0.0;
+        double da   = nval ? (static_cast<double>(correct) / nval) : 0.0;
 
         // has validation improved by at least the tolerance
         if(avgValidationLoss + stoppingToleranceLoss < bestValLoss){
@@ -151,13 +176,39 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
             }
         }
 
+        // (TODO CAN BE REMOVED LATER)
         std::cout << "Epoch " << epoch
-            << " | train loss: " << std::fixed << std::setprecision(6)
-            << avgTrainingLoss
-            << " | val  loss: " << std::fixed << std::setprecision(6)
-            << avgValidationLoss 
+            << " | train: " << std::fixed << std::setprecision(6) << avgTrainingLoss
+            << " | val: "   << std::fixed << std::setprecision(6) << avgValidationLoss
+            << " | MAE: "   << std::fixed << std::setprecision(6) << mae
+            << " | RMSE: "  << std::fixed << std::setprecision(6) << rmse
+            << " | DA: "    << std::fixed << std::setprecision(3) << da
             << " | best val: " << std::fixed << std::setprecision(6)
-            << bestValLoss << " at epoch " << bestEpoch << std::endl;
+            << bestValLoss << " (ep " << bestEpoch << ")"
+            << std::endl;
+
+        static bool wroteHeader = false;
+        static std::ofstream csv("tests/results.csv", std::ios::app);
+
+        if (csv && !wroteHeader) {
+            csv << "epoch,train_loss,val_loss,mae,rmse,da,ada_lr,dense_lr\n";
+            wroteHeader = true;
+        }
+
+        double adaLR   = optimiser.getLearningRate();
+        double denseLR = learningRate;
+
+        if (csv) {
+            csv << epoch << ","
+                << avgTrainingLoss << ","
+                << avgValidationLoss << ","
+                << mae << ","
+                << rmse << ","
+                << da << ","
+                << adaLR << ","
+                << denseLR << "\n";
+            csv.flush();
+        }
     }
 
     return {bestValLoss, bestEpoch, epochs};
