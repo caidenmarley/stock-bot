@@ -15,7 +15,7 @@ endif()
 include_directories(include)
 
 file(GLOB_RECURSE SRC_FILES
-    src/**/*.cpp
+    src/*.cpp
 )
 
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)

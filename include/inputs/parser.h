@@ -53,7 +53,7 @@ class CSVLoader {
     
     /**
      * Inline function to scan until the next comma or newline then calls from_chars to convert
-     * that substring into "dest" without any extra allocations
+     * that substring into "dest" without any extra allocations. Leaving point on delimiter
      * 
      * @tparam T any type that from_cahrs can convert to, (e.g. double)
      * @param ptr reference to the ptr to the start of the substring being converted
@@ -61,19 +61,19 @@ class CSVLoader {
      * @param dest Reference to the variable that recieves the parsed value
      */
     template <typename T>
-    static inline void parseNext(char*& ptr, char* end, T& dest) {
+    static inline void parseNext(char*& ptr, const char* end, T& dest) {
         if (ptr >= end) {
             throw std::runtime_error("Unexpected end of buffer");
         }
         if (*ptr == ',') ++ptr;
-        char* start = ptr;
+        const char* start = ptr;
         while (ptr < end && *ptr != ',' && *ptr != '\n' && *ptr != '\r'){
             ++ptr;
         } 
         // conv string into num type without copying or allocating
-        auto res = std::from_chars(start, ptr, dest);
-        if (res.ec != std::errc()) {
-            dest = T {}; // fallback zero
+        auto val = std::from_chars(start, ptr, dest);
+        if (val.ec != std::errc()) {
+            throw std::runtime_error("from chars failed");
         }
     }
 };
