@@ -17,12 +17,13 @@ public:
      * adds raw value from PriceData struct to rawValues vector keeping a running tally of the sum
      * and the sum of squares to calc stddev and mean. Removes value from front of the queue if the
      * size of the queue is bigger than "windowSize"
+     * Adds to deque in order open[0], high[1], low[2], ... , volume[5]
      * 
      * @param data the raw PriceData struct from parser
      */
     void add(const PriceData& data);
     /**
-     * Returns the scaled values for the most recent day added to the queue (back of the rawValues queue)
+     * Returns a vector with the scaled values for the most recent day added to the queue (back of the rawValues queue)
      * scaled through scaled = feature - mean / stdDev, normalising the data based on the data seen so far
      * 
      * @return vector containing all the scaled features for the most recently added day

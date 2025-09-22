@@ -4,6 +4,7 @@
 #include <cmath>
 #include <fstream>
 #include <numeric>
+#include <utility>
 
 Trainer::Trainer(int numFeatures, int hiddenSize, int sequenceLength, int batchSize, double learningRate, double delta,
 size_t windowSize, double maxNorm, double decayFactor, double minLR, int lrDecayMaxTries,
@@ -12,8 +13,40 @@ const std::vector<PriceData>& rawTrainingData, const std::vector<PriceData>& raw
     optimiser(lstm.getParameterCount(), learningRate),  huberLoss(delta),
     sequenceLength(sequenceLength), batchSize(batchSize), learningRate(learningRate), windowSize(windowSize), 
     maxNorm(maxNorm), decayFactor(decayFactor), minLR(minLR), lrDecayMaxTries(lrDecayMaxTries),
-    trainingData(rawTrainingData, numFeatures, sequenceLength, batchSize, windowSize), 
-    validationData(rawValidationData, numFeatures, sequenceLength, batchSize, windowSize){}
+    // Training has empty scaler
+    trainingData(
+        rawTrainingData, 
+        numFeatures, 
+        sequenceLength, 
+        batchSize, 
+        RollingWindowScaler(windowSize, numFeatures) // empty
+    ), 
+    // Validation has a temporary empty scaler to be rebuilt below with a preLoadedScaler
+    validationData(
+        rawValidationData, 
+        numFeatures, 
+        sequenceLength, 
+        batchSize, 
+        RollingWindowScaler(windowSize, numFeatures) // empty placeholder
+    )
+{
+    RollingWindowScaler valScaler(windowSize, numFeatures);
+
+    const size_t split = rawTrainingData.size(); // length of training data
+    const size_t preLoadStart = (split > windowSize) ? (split - windowSize) : 0; // take windowSize worth of data
+    for(size_t i = preLoadStart; i < split; ++i){
+        // add windowSize number of data points before the split to the rolling window scalar
+        valScaler.add(rawTrainingData[i]);
+    }
+
+    validationData = StockData(
+        rawValidationData,
+        numFeatures, 
+        sequenceLength, 
+        batchSize, 
+        std::move(valScaler) // move pre loaded scaler
+    );
+}
 
 TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int maxEpochsWithNoImprovement){
     double bestValLoss = 1000000;

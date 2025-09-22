@@ -23,7 +23,9 @@ class StockData {
      * @param batchSize number of sequences per batch
      * @param windowSize size of the window used for the scaler
      */
-    StockData(const std::vector<PriceData>& rawData, size_t numFeatures, size_t sequenceLength, size_t batchSize, size_t windowSize);
+    StockData(const std::vector<PriceData>& rawData, 
+              int numFeatures, int sequenceLength, 
+              int batchSize, RollingWindowScaler preLoadedScaler);
 
     // true if there are more batches to fetch
     bool hasAnotherBatch() const {

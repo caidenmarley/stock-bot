@@ -1,13 +1,14 @@
 #include "inputs/shape_inputs.h"
 #include <algorithm>
 #include <stdexcept>
+#include <utility>
 
-StockData::StockData(const std::vector<PriceData>& rawData, size_t numFeatures, size_t sequenceLength, size_t batchSize, size_t windowSize)
+StockData::StockData(const std::vector<PriceData>& rawData, int numFeatures, int sequenceLength, int batchSize, RollingWindowScaler preLoadedScaler)
         : sequenceLength(sequenceLength),
         numFeatures(numFeatures),
         batchSize(batchSize),
         positionIndex(0),
-        scaler(windowSize, numFeatures) {
+        scaler(std::move(preLoadedScaler)) {
     // Number of days available
     const size_t numDays = rawData.size();
     if (numDays < this->sequenceLength + 1) { // You need at least 1 day to compare with models predictions
@@ -26,9 +27,9 @@ StockData::StockData(const std::vector<PriceData>& rawData, size_t numFeatures, 
         // rolling window scaling per day
         this->scaler.add(rawData[day]);
         std::vector<double> scaled = this->scaler.scaledValuesPerDay();
-        double* ptr = featureMatrix.data() + day * this->numFeatures;
+        double* rowPtr = featureMatrix.data() + day * this->numFeatures;
         for(size_t i = 0; i < this->numFeatures; i++){
-            ptr[i] = scaled[i];
+            rowPtr[i] = scaled[i];
         }
     }
 
