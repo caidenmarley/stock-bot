@@ -1,4 +1,4 @@
-#include "inputs/shape_inputs.h"
+#include "inputs/stock_data.h"
 #include <algorithm>
 #include <stdexcept>
 #include <utility>

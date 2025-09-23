@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include "model/trainer.h"
-#include "inputs/shape_inputs.h"
+#include "inputs/stock_data.h"
 
 enum class ParamType {INTEGER, DOUBLE};
 
