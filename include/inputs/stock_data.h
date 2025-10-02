@@ -13,8 +13,8 @@ class StockData {
   public:
     /**
      * Converts the raw PriceData into feature matrix of size [numDays x numFeatures] for each day,
-     * adding the scaled values to this matrix. Then splits this matrix into inputs [numSequences][sequenceLength][numFeatures]
-     * and targets [numSequences], inputs being the values fed into the model and targets being the values the model is trying
+     * adding the scaled values to this matrix. Then splits this matrix into inputs [numWindows][sequenceLength][numFeatures]
+     * and targets [numWindows], inputs being the values fed into the model and targets being the values the model is trying
      * to predict based on close prices. 
      * 
      * @param rawData Reference to the PriceData vector containing the rawData to be parsed into the tensors
@@ -29,37 +29,65 @@ class StockData {
 
     // true if there are more batches to fetch
     bool hasAnotherBatch() const {
-        return positionIndex < numSequences;
+        return positionIndex < numWindows;
     }
 
     /**
-     * Returns the next batch as a pair, zero copy tensor slices, 
-     * splitting into inputs [currentBatch, sequenceLength, numFeatures], and targets [currentBatch]
+     * Returns the next batch as a pair of zero copy tensor slices, 
+     * splitting into inputs [currentBatch, sequenceLength, numFeatures], 
+	 * and targets [currentBatch]. Uses the positionIndex variable to take 
+	 * a contiguous slice
      * 
      * @return std::pair, input batch and target batch
      */
     std::pair<
-      Eigen::TensorMap< const Eigen::Tensor<double, 3, Eigen::RowMajor>>, 
-      Eigen::Map<const Eigen::VectorXd>
+        Eigen::TensorMap< const Eigen::Tensor<double, 3, Eigen::RowMajor>>, 
+        Eigen::Map<const Eigen::VectorXd>
     > nextBatch();
+
+	/**
+	 * Returns a batch in a shuffled sequence order as a pair
+	 * splitting into inputs [currentBatch, sequenceLength, numFeatures],
+	 * and targets [currentBatch].
+	 * 
+	 * Intended for use in training only
+	 * 
+	 * @param order sequence indicies in the shuffled order (size numWindows)
+	 * @param batchStart starting index into 'order' for this batch
+	 * @param currentBatchSize size of current batch size (normally = batchSize, but last batch could be less than this)
+	 * @return std::pair, input batch and target batch
+	 */
+    std::pair<
+      	Eigen::TensorMap<const Eigen::Tensor<double,3,Eigen::RowMajor>>,
+      	Eigen::Map<const Eigen::VectorXd>
+	> nextBatchShuffled(
+		const std::vector<int>& order,
+		int batchStart,
+		int batchSize
+	);
+    
 
     // reset the postion index so batches start from the beginning again
     void reset() {
         positionIndex = 0;
     }
 
-    size_t getNumFeatures() const{
-        return this->numFeatures;
-    }
+    int getNumFeatures() const{return this->numFeatures;}
+    int getNumWindows() const{return this->numWindows;}
 
   private:
-    size_t sequenceLength;  // days per sequence window
-    size_t numFeatures;   // feature count per day (6)
-    size_t batchSize;     // sequences per batch
-    size_t numSequences;  // total sliding window sequences
-    size_t positionIndex; // how many sequences have been served
+    int sequenceLength;  // days per sequence window
+    int numFeatures;   // feature count per day (6)
+    int batchSize;     // sequences per batch
+    int numWindows;  // total sliding window sequences
+    int positionIndex; // how many sequences have been served
+    const Eigen::Index elementsPerWindow; // sequenceLength * numFeatures as input shape is [numWindows][sequenceLength][numFeatures]
 
     RollingWindowScaler scaler;
-    Eigen::Tensor<double, 3, Eigen::RowMajor> inputs; // [numSequences][sequenceLength][numFeatures]
-    Eigen::VectorXd targets;                          // [numSequences]
+    Eigen::Tensor<double, 3, Eigen::RowMajor> inputs; // [numWindows][sequenceLength][numFeatures]
+    Eigen::VectorXd targets;                          // [numWindows]
+
+	// space for one shuffled batch (reused every call of nextBatchShuffled)
+	Eigen::Tensor<double, 3, Eigen::RowMajor> tempInputs;
+	Eigen::VectorXd tempTargets;
 };
