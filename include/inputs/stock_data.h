@@ -81,7 +81,7 @@ class StockData {
     int batchSize;     // sequences per batch
     int numWindows;  // total sliding window sequences
     int positionIndex; // how many sequences have been served
-    const Eigen::Index elementsPerWindow; // sequenceLength * numFeatures as input shape is [numWindows][sequenceLength][numFeatures]
+    Eigen::Index elementsPerWindow; // sequenceLength * numFeatures as input shape is [numWindows][sequenceLength][numFeatures]
 
     RollingWindowScaler scaler;
     Eigen::Tensor<double, 3, Eigen::RowMajor> inputs; // [numWindows][sequenceLength][numFeatures]
