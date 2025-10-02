@@ -10,24 +10,6 @@
 #include <vector>
 #include <iomanip>
 
-// struct TrainerParams{
-//     // hyperparameters
-//     int numFeatures = 6;
-//     int hiddenSize = 64;  // dimension of lstm matrices
-//     int sequenceLength = 15; // number of days per sequence
-//     int batchSize = 10; // number of sequences per batch
-//     double learningRate = 1e-3;
-//     size_t windowSize = 256; // number of days in each scaler window
-//     double maxNorm = 0.001;
-//     double decayFactor = 0.5; // learning rate halves at each plateau
-//     double minLR = 1e-6; // minimum learning rate
-//     int lrDecayMaxTries = 3; // gives up after 3 decays
-//     double delta = 1.0; // huber loss delta value
-//     int epochs = 30;
-//     double stoppingToleranceLoss = 1e-4;
-//     int maxEpochsWithNoImprovement = 3;
-// };
-
 static TrainingResult runFold(
     const std::vector<PriceData>& rawData,
     int splitStart,
@@ -81,7 +63,7 @@ int main(int argc, char* argv[]) {
         int maxEpochsWithNoImprovement = 3;
 
         // for rng so you can compare changes
-        int seed = 0; // default
+        int seed = 0;
         bool givenSeed = false;
 
         // ---Arg Parsing---
@@ -160,34 +142,8 @@ int main(int argc, char* argv[]) {
         avg /= foldResults.size() ? foldResults.size() : 1;
 
         std::cout << "[SUMMARY] avg best val loss = " << std::fixed 
-                  << std::setprecision(6) << avg << " | best fold loss = " << best << std::endl;
-
-
-
-        // // split data into 80/20 train/validation split
-        // int maxStartSequence = rawData.size() - sequenceLength;  
-        // int splitStart = 0.8*maxStartSequence;
-        
-        // std::vector<PriceData> trainingData(rawData.begin(), rawData.begin() + splitStart);
-        // std::vector<PriceData> validationData(rawData.begin() + splitStart, rawData.end());
-
-        // Trainer trainer(
-        //     numFeatures,
-        //     hiddenSize,
-        //     sequenceLength,
-        //     batchSize, 
-        //     learningRate,
-        //     delta,
-        //     windowSize,
-        //     maxNorm,
-        //     decayFactor,
-        //     minLR,
-        //     lrDecayMaxTries,
-        //     trainingData,
-        //     validationData
-        // );
-
-        // trainer.run(epochs, stoppingToleranceLoss, maxEpochsWithNoImprovement);
+                  << std::setprecision(6) << avg << " | best fold loss = " << best 
+                  << std::endl;
 
     } catch (const std::exception& ex) {
         std::cerr << "Error: " << ex.what() << std::endl;

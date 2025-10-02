@@ -5,6 +5,8 @@
 #include <fstream>
 #include <numeric>
 #include <utility>
+#include <algorithm>
+#include <random>
 
 Trainer::Trainer(int numFeatures, int hiddenSize, int sequenceLength, int batchSize, double learningRate, double delta,
 size_t windowSize, double maxNorm, double decayFactor, double minLR, int lrDecayMaxTries,
@@ -60,17 +62,26 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
         double trainingLoss = 0.0;  // accumulator for training loss
         size_t trainingExamples = 0;
 
+        // build and shuffle order for this epoch
+        std::vector<int> order(trainingData.getNumWindows());
+        std::iota(order.begin(), order.end(), 0); // fills in increasing order from 0
+
+        static thread_local std::mt19937 rng(42); // TODO link up to global seed
+        std::shuffle(order.begin(), order.end(), rng);
+
         // loop over all batches
-        while(trainingData.hasAnotherBatch()){
-            auto [inputBatch, targetBatch] = trainingData.nextBatch();
-            int currentBatch = targetBatch.size();
+        for(int batchStart = 0; batchStart < static_cast<int>(order.size()); batchStart+=batchSize){
+            const int remaining = static_cast<int>(order.size()) - batchStart;
+            const int currentBatchSize = (remaining < batchSize) ? remaining : batchSize;
+            
+            auto [inputBatch, targetBatch] = trainingData.nextBatchShuffled(order, batchStart, currentBatchSize);
 
             // reset gradients so next batch can make its own contribution to the weights
             lstm.zeroGrad();
             outputLayer.zeroGrad();
 
             // forward and backward pass over the current batch
-            for(int i = 0; i < currentBatch; i++){
+            for(int i = 0; i < currentBatchSize; i++){
                 lstm.reset();
                 Eigen::VectorXd hiddenState;
 

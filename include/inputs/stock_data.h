@@ -1,10 +1,10 @@
 #pragma once
 
-#include <vector>
 #include "inputs/parser.h"
+#include "inputs/rolling_window_scaler.h"
+#include <vector>
 #include <Eigen/Dense>
 #include <unsupported/Eigen/CXX11/Tensor>
-#include "inputs/rolling_window_scaler.h"
 
 /**
  * Class that converts raw PriceData structs into tensors to be used in the model
@@ -62,8 +62,8 @@ class StockData {
       	Eigen::Map<const Eigen::VectorXd>
 	> nextBatchShuffled(
 		const std::vector<int>& order,
-		int batchStart,
-		int batchSize
+		const int batchStart,
+		const int currentBatchSize
 	);
     
 

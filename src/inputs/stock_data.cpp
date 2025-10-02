@@ -119,8 +119,8 @@ std::pair<
     Eigen::Map<const Eigen::VectorXd>
 > StockData::nextBatchShuffled(
     const std::vector<int>& order,
-    int batchStart,
-    int currentBatchSize // last batch could be different than batchSize
+    const int batchStart,
+    const int currentBatchSize // last batch could be different than batchSize
 ){
     assert(currentBatchSize > 0);
     assert(batchStart >= 0);
