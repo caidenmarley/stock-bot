@@ -9,6 +9,7 @@
 #include <iostream>
 #include <vector>
 #include <iomanip>
+#include <fstream>
 
 static TrainingResult runFold(
     const std::vector<PriceData>& rawData,
@@ -42,6 +43,10 @@ static TrainingResult runFold(
 
 int main(int argc, char* argv[]) {
     try {
+        // clear results csv
+        std::ofstream ofs;
+        ofs.open("tests/results.csv", std::ofstream::out | std::ofstream::trunc);
+        ofs.close();
         //bool test = false;
 
         // TrainerParams trainerParams;
