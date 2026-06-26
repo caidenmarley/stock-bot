@@ -1002,6 +1002,23 @@ cd /home/caidenmarley/stock-bot
 **Remaining Milestone 13 work**:
 - Optional refactor planning and code-structure cleanup can be considered after this documentation extraction is committed.
 
+### **Milestone 13B: Refactor Planning** ✅ COMPLETE (June 26, 2026)
+
+**Scope**: Planning-only milestone. No refactor implementation performed.
+
+**Files Changed**:
+- `docs/REFACTOR_PLAN.md` (NEW)
+- `PROJECT_STATE.md` (this milestone note only)
+
+**Refactor Plan Created**:
+- `docs/REFACTOR_PLAN.md` now defines prioritized categories and small, separate candidate tasks with motivation, likely files, risk level, validation command, and expected production-code impact.
+
+**No production code changed**:
+- No changes to `src/`, `include/`, `tests/`, `CMakeLists.txt`, `main.cpp`, or existing test files were made in this milestone.
+
+**Recommended first follow-up task**:
+- Generated-file hygiene for `tests/results.csv` (especially index/untracking hygiene if it is currently tracked) before larger refactor items.
+
 ---
 
 ## Summary
