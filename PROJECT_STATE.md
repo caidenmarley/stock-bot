@@ -270,9 +270,9 @@ cmake --build . --target testbed
 2. ✅ **Rolling-window scaling** – RollingWindowScaler works correctly for independent features
 3. ✅ **Sequence construction** – StockData converts data into LSTM-ready batches
 4. ✅ **LSTM forward pass** – Standard equations, Xavier init
-5. ⚠️ **LSTM backward pass** – Unrolled BPTT for full sequences (implemented but not yet numerically verified)
-6. ⚠️ **Dense output layer** – Simple linear regression with gradient accumulation (implemented but not yet numerically verified)
-7. ⚠️ **Huber loss** – Forward and backward passes (implemented but not yet numerically verified)
+5. ⚠️ **LSTM backward pass** – Tiny deterministic finite-difference BPTT check passed in Milestone 10; broader coverage is still pending.
+6. ⚠️ **Dense output layer** – Finite-difference gradient check passed for a deterministic case in Milestone 8; not exhaustively proven.
+7. ⚠️ **Huber loss** – Forward/backward behavior covered by Milestone 7 tests; not exhaustively proven.
 8. ✅ **AdaBelief optimizer** – Parameter updates with bias correction
 9. ✅ **Training loop** – Epoch iteration, batch processing, validation
 10. ✅ **Learning rate decay** – Halves LR on validation plateau
@@ -298,7 +298,8 @@ cmake --build . --target testbed
 
 3. ⚠️ **ML correctness validation** – LSTM checks still incomplete
   - Dense layer finite-difference gradient check now passes (Milestone 8)
-  - LSTM: no gradient check for BPTT yet
+  - LSTM finite-difference gradient check now passes for a tiny deterministic case (Milestone 10)
+  - Broader LSTM gradient coverage (more shapes/sequences/loss setups) is still pending
   - Milestone 9 parameter-order consistency checks now pass after fixing a test issue in the original single-index mutation assertion
 
 4. ⚠️ **Loss/metrics coverage is improved but not exhaustive**
@@ -343,9 +344,10 @@ cmake --build . --target testbed
 - **Risk**: BPTT implementation might have sign errors or off-by-one bugs
 - **Current Status**: 
   - Forward pass follows standard LSTM equations
-  - Backward pass unrolls through sequence (implemented but not numerically verified)
-  - Parameter vector ordering is assumed correct but unverified
-- **Mitigation**: Add numerical gradient check (finite differences vs. analytical) as Milestone 10
+  - Tiny deterministic numerical gradient check passed in Milestone 10
+  - Broader-case coverage (different shapes/sequences/loss setups) is still pending
+  - Parameter vector ordering checks passed for covered cases in Milestone 9
+- **Mitigation**: Expand LSTM gradient checks to additional configurations before considering BPTT broadly verified
 
 ### 3. **Parameter Vector Ordering** (High)
 - **Risk**: `getParametersVector()`, `setParametersVector()`, `getGradientsVector()` must be perfectly aligned
@@ -353,21 +355,21 @@ cmake --build . --target testbed
   - Observed ordering from implementation appears to be: `Wf, Uf, bf, Wi, Ui, bi, Wc, Uc, bc, Wo, Uo, bo`
   - Milestone 9 test suite now passes all checks (6/6)
   - Original failure was caused by a test bug (reference aliasing in the old single-index assertion), not a confirmed production ordering bug
-- **Mitigation**: Keep Milestone 10 numerical gradient checks as the next deeper LSTM correctness gate
+- **Mitigation**: Keep ordering assertions in regression tests and continue validating through broader LSTM gradient cases
 
 ### 4. **Dense Layer Gradient Accumulation** (High)
 - **Risk**: Gradients might be summed instead of averaged, or vice versa
 - **Current Status**: 
   - `Dense::backward()` accumulates via `dW += dLdy * h^T` (implemented)
   - Optimizer handles learning rate scaling
-  - No numerical verification yet
-- **Mitigation**: Add finite-difference gradient check as Milestone 8
+  - Milestone 8 finite-difference check passed for a deterministic case
+- **Mitigation**: Add additional multi-shape/multi-batch dense checks if deeper accumulation coverage is needed
 
 ### 5. **Validation Loss Interpretation** (High)
 - **Risk**: Low validation loss does not guarantee profitability or realistic trading performance
 - **Current Status**: 
-  - Loss is reported as Huber loss (MSE-like)
-  - Trading metrics (Sharpe, PnL, turnover) are implemented but not validated for realism
+  - Huber loss forward/backward and core metrics formulas are covered by Milestone 7 tests
+  - Trading metrics (Sharpe, PnL, turnover) are implemented, but realism/market assumptions are not fully validated
   - Transaction cost model is simple; slippage not simulated
 - **Mitigation**: Document limitations and review cost assumptions in Milestone 12
 
@@ -756,13 +758,62 @@ cd /home/caidenmarley/stock-bot
 - Flat ordering appears internally consistent for covered checks, but LSTM numerical gradient correctness is still unverified
 - Full LSTM numerical gradient checking remains Milestone 10
 
-### **Milestone 10: LSTM Gradient Check**
-- [ ] Minimal numerical gradient test:
-  - Tiny LSTM: 2 features, 4 hidden, sequence length 3
-  - Fixed seed
-  - Compare analytical BPTT vs. finite-difference gradient
-  - Catches backprop bugs early
-- [ ] Expand to realistic size only after tiny case passes
+### **Milestone 10: LSTM Gradient Check** ✅ COMPLETE (June 26, 2026)
+
+**Files Changed** (intentionally modified: 3 files):
+
+- `tests/lstm_gradient_test.cpp` (NEW) – Tiny deterministic LSTM BPTT finite-difference gradient check
+- `CMakeLists.txt` (UPDATED) – Added `lstm_gradient_test` executable target
+- `PROJECT_STATE.md` (UPDATED) – Documented Milestone 10 results
+
+**Production code not modified**: No changes to `src/` or `include/` directories
+
+**Test design**:
+- LSTM shape: `inputSize=2`, `hiddenSize=4`, `sequenceLength=3`
+- Deterministic parameters: `params[i] = 0.01 * sin(i + 1)`
+- Fixed input sequence:
+  - `x0 = [0.10, -0.20]`
+  - `x1 = [0.05, 0.30]`
+  - `x2 = [-0.15, 0.07]`
+- Loss on final hidden state only: `0.5 * ||h_final - target||^2`
+- Deterministic target: `target[j] = 0.03 * (j + 1)`
+- Analytical gradient: forward over sequence, then reverse-time `backwardPass` with `deltaH = h_final - target`, `deltaC = 0`
+- Numerical gradient: central finite differences with `epsilon = 1e-5`
+- Tolerances used:
+  - absolute tolerance `1e-4`
+  - relative tolerance `1e-3`
+
+**Build/Run Commands**:
+```bash
+# Configure and build
+cd /home/caidenmarley/stock-bot/build
+cmake ..
+cmake --build . --target lstm_gradient_test
+
+# Run test from repo root
+cd /home/caidenmarley/stock-bot
+./build/lstm_gradient_test
+```
+
+**Test Results**: ✅ **1/1 PASSED**
+
+- ✅ Analytical gradient vector length equals parameter vector length
+- ✅ All analytical gradients are finite
+- ✅ All numerical gradients are finite
+- ✅ Analytical and numerical gradients match within tolerance
+
+**Reported error metrics**:
+- Max absolute error: `2.70113e-12`
+- Max relative error: `2.70113e-12`
+- Worst index: `83`
+- Worst analytical value: `-0.0504472`
+- Worst numerical value: `-0.0504472`
+
+**No LSTM gradient bug detected by current test** for the covered tiny deterministic case.
+
+**Remaining LSTM gradient risks (unresolved)**:
+- This is a single small-case gradient check; wider coverage (different hidden sizes, longer sequences, and alternate loss setups) is still needed
+- Full training-loop-level LSTM behavior and time-series validation leakage concerns remain Milestone 11–12 scope
 
 ### **Milestone 11: Training Loop Review**
 - [ ] Audit training loop:
@@ -800,7 +851,7 @@ cd /home/caidenmarley/stock-bot
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–8 Status**: Build, runtime, parser, rolling-scaler, StockData, loss/metrics, and Dense gradient verification PASSED ✅
+  - **Milestone 2–10 Status**: Build, runtime, parser, rolling-scaler, StockData, loss/metrics, Dense gradient, and tiny-case LSTM gradient verification PASSED ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -808,13 +859,14 @@ cd /home/caidenmarley/stock-bot
     - Milestone 6: StockData behavior verified (9 dedicated StockData tests all passed)
     - Milestone 7: Huber loss and metrics behavior verified (10 dedicated loss/metrics tests all passed)
     - Milestone 8: Dense backward gradient check verified (6 dedicated Dense gradient tests all passed)
+    - Milestone 10: LSTM tiny-case finite-difference gradient check verified (1 dedicated test passed)
   - Milestone 9: LSTM parameter ordering consistency verified (6/6 tests passed)
-  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, and `lstm_parameter_order_test`
-- Critical component still pending numerical verification: LSTM backward/BPTT
+  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, and `lstm_gradient_test`
+- LSTM backward/BPTT now has tiny-case numerical verification; broader-case verification is still pending
 - Seed option is implemented and was accepted during the smoke test, but full reproducibility still requires repeated-run comparison
 
 **Main Risks**: 
-- Unverified LSTM gradients and data leakage
+- Limited-scope LSTM gradient verification (only tiny deterministic case) and data leakage
 - Low coverage for end-to-end validation integrity
 - Trading metrics are unvalidated and should not be interpreted as profit signals
 
@@ -826,8 +878,8 @@ cd /home/caidenmarley/stock-bot
 5. ✅ Loss/metrics tests (Milestone 7) – **COMPLETE (June 26, 2026)**
 6. ✅ Dense gradient check (Milestone 8) – **COMPLETE (June 26, 2026)**
 7. ✅ LSTM parameter-order checks (Milestone 9) – **COMPLETE (June 26, 2026)**
-8. Add LSTM gradient check (Milestone 10) – **Next step**
-9. Audit training loop and validation logic (Milestone 11–12)
+8. ✅ LSTM gradient check (Milestone 10) – **COMPLETE (June 26, 2026)**
+9. Audit training loop and validation logic (Milestone 11–12) – **Next step**
 10. Refactor and document (Milestone 13)
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.
