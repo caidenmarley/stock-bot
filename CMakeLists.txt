@@ -35,3 +35,5 @@ add_executable(stock_data_test tests/stock_data_test.cpp ${SRC_FILES})
 add_executable(loss_metrics_test tests/loss_metrics_test.cpp ${SRC_FILES})
 # create dense_gradient_test exe, cmake --build build --target dense_gradient_test
 add_executable(dense_gradient_test tests/dense_gradient_test.cpp ${SRC_FILES})
+# create lstm_parameter_order_test exe, cmake --build build --target lstm_parameter_order_test
+add_executable(lstm_parameter_order_test tests/lstm_parameter_order_test.cpp ${SRC_FILES})
