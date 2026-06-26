@@ -33,3 +33,5 @@ add_executable(rolling_window_scaler_test tests/rolling_window_scaler_test.cpp $
 add_executable(stock_data_test tests/stock_data_test.cpp ${SRC_FILES})
 # create loss_metrics_test exe, cmake --build build --target loss_metrics_test
 add_executable(loss_metrics_test tests/loss_metrics_test.cpp ${SRC_FILES})
+# create dense_gradient_test exe, cmake --build build --target dense_gradient_test
+add_executable(dense_gradient_test tests/dense_gradient_test.cpp ${SRC_FILES})

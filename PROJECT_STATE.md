@@ -296,10 +296,10 @@ cmake --build . --target testbed
   - Remaining gaps: deeper numeric validation of scaled input tensor values and stress/performance behavior on large datasets
   - Integration leakage guarantees across train/validation folds still require Milestone 12 validation tests
 
-3. ⚠️ **ML correctness validation** – Gradient checks still missing
-   - Dense layer: no finite-difference verification
-   - LSTM: no gradient check for BPTT
-   - Could catch bugs in backprop or parameter vector ordering
+3. ⚠️ **ML correctness validation** – LSTM gradient checks still missing
+  - Dense layer finite-difference gradient check now passes (Milestone 8)
+  - LSTM: no gradient check for BPTT yet
+  - Parameter-vector ordering checks still pending (Milestone 9)
 
 4. ⚠️ **Loss/metrics coverage is improved but not exhaustive**
   - Huber forward/backward behavior and core metrics pipeline are now covered (Milestone 7)
@@ -670,12 +670,44 @@ cd /home/caidenmarley/stock-bot
 - `predictionsToScaledPositions` remains declared but not implemented in `metrics.cpp` (not invoked in tests)
 - Trading metrics are mathematically validated for tested formulas, but still not proof of real-world profitability
 
-### **Milestone 8: Dense Layer Gradient Check**
-- [ ] Numerical gradient check:
-  - Compute analytical gradient from `Dense::backward()`
-  - Compute numerical gradient via finite differences
-  - Compare with tolerance (e.g., 1e-6)
-  - Catches accumulation or sign errors
+### **Milestone 8: Dense Layer Gradient Check** ✅ COMPLETE (June 26, 2026)
+
+**Files Changed** (intentionally modified: 3 files):
+
+- `tests/dense_gradient_test.cpp` (NEW) – Dedicated Dense gradient test suite (6 tests)
+- `CMakeLists.txt` (UPDATED) – Added `dense_gradient_test` executable target
+- `PROJECT_STATE.md` (UPDATED) – Documented Milestone 8 results
+
+**Production code not modified**: No changes to `src/` or `include/` directories
+
+**Build/Run Commands**:
+```bash
+# Configure and build
+cd /home/caidenmarley/stock-bot/build
+cmake ..
+cmake --build . --target dense_gradient_test
+
+# Run tests from repo root
+cd /home/caidenmarley/stock-bot
+./build/dense_gradient_test
+```
+
+**Test Results**: ✅ **6/6 PASSED**
+
+- ✅ **Test 1: Dense forward** matches `y = W dot h + b`
+- ✅ **Test 2: Dense backward analytical gradients** match `dW = dLdy * h` and `db = dLdy`
+- ✅ **Test 3: Numerical gradients for each weight** match analytical `dW` via central finite differences
+- ✅ **Test 4: Numerical gradient for bias** matches analytical `db`
+- ✅ **Test 5: `zeroGrad()` clears `dW` and `db`**
+- ✅ **Test 6: Backward accumulation behavior** is explicit (`backward` twice without `zeroGrad` accumulates)
+
+**No Dense bugs detected by current tests** for covered cases.
+
+**Dense behavior is tested for covered cases, not exhaustively proven.**
+
+**Remaining Dense risks (unresolved)**:
+- Gradient check currently uses a single deterministic shape/example; broader multi-shape coverage may still reveal edge cases
+- Integration interaction with full training loop still depends on later milestones (Milestones 9–12)
 
 ### **Milestone 9: LSTM Parameter Ordering Check**
 - [ ] Verify parameter vector consistency:
@@ -728,20 +760,21 @@ cd /home/caidenmarley/stock-bot
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–7 Status**: Build, runtime, parser, rolling-scaler, StockData, and loss/metrics verification PASSED ✅
+  - **Milestone 2–8 Status**: Build, runtime, parser, rolling-scaler, StockData, loss/metrics, and Dense gradient verification PASSED ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
     - Milestone 5: RollingWindowScaler behavior verified (8 dedicated scaler tests all passed)
     - Milestone 6: StockData behavior verified (9 dedicated StockData tests all passed)
     - Milestone 7: Huber loss and metrics behavior verified (10 dedicated loss/metrics tests all passed)
-  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, and `loss_metrics_test`
-- Critical components (LSTM backward and Dense gradients) are implemented but not numerically verified
+    - Milestone 8: Dense backward gradient check verified (6 dedicated Dense gradient tests all passed)
+  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, and `dense_gradient_test`
+- Critical component still pending numerical verification: LSTM backward/BPTT
 - Seed option is implemented and was accepted during the smoke test, but full reproducibility still requires repeated-run comparison
 
 **Main Risks**: 
 - Unverified LSTM gradients, parameter ordering, and data leakage
-- Low test coverage for gradient correctness and end-to-end validation integrity
+- Low test coverage for LSTM gradient correctness and end-to-end validation integrity
 - Trading metrics are unvalidated and should not be interpreted as profit signals
 
 **Next Actions** (in priority order):
@@ -750,8 +783,9 @@ cd /home/caidenmarley/stock-bot
 3. ✅ Rolling scaler tests (Milestone 5) – **COMPLETE (June 26, 2026)**
 4. ✅ StockData tests (Milestone 6) – **COMPLETE (June 26, 2026)**
 5. ✅ Loss/metrics tests (Milestone 7) – **COMPLETE (June 26, 2026)**
-6. Add numerical gradient checks for Dense and LSTM (Milestone 8–10) – **Next step**
-7. Audit training loop and validation logic (Milestone 11–12)
-8. Refactor and document (Milestone 13)
+6. ✅ Dense gradient check (Milestone 8) – **COMPLETE (June 26, 2026)**
+7. Add parameter ordering and LSTM gradient checks (Milestones 9–10) – **Next step**
+8. Audit training loop and validation logic (Milestone 11–12)
+9. Refactor and document (Milestone 13)
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.
