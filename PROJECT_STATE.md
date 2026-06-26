@@ -979,6 +979,29 @@ cd /home/caidenmarley/stock-bot
   - `ML_CORRECTNESS.md` – gradient derivations, parameter ordering
   - `KNOWN_RISKS.md` – data leakage, overfitting, metric interpretation
 
+### **Milestone 13A: Documentation Extraction** ✅ COMPLETE (June 26, 2026)
+
+**Scope**: Documentation-only extraction from `PROJECT_STATE.md` into standalone `docs/` files.
+
+**Files Changed**:
+- `docs/BUILD.md` (NEW)
+- `docs/ARCHITECTURE.md` (NEW)
+- `docs/ML_CORRECTNESS.md` (NEW)
+- `docs/KNOWN_RISKS.md` (NEW)
+- `PROJECT_STATE.md` (this milestone note only)
+
+**No production code changed**:
+- No changes to `src/`, `include/`, `tests/`, `CMakeLists.txt`, or `main.cpp` were made in this milestone.
+
+**Docs Created**:
+- `docs/BUILD.md`: dependency requirements, configure/build/run commands, generated-results file notes.
+- `docs/ARCHITECTURE.md`: high-level scope, data flow, module responsibilities, training vs validation behavior, and not-yet-implemented components.
+- `docs/ML_CORRECTNESS.md`: tested coverage summary, LSTM parameter ordering, Dense/LSTM gradient-check summaries, and documented modelling assumptions.
+- `docs/KNOWN_RISKS.md`: current known risks, including leakage, gradient-coverage limits, clipping policy, generated-file hygiene, and missing roadmap components.
+
+**Remaining Milestone 13 work**:
+- Optional refactor planning and code-structure cleanup can be considered after this documentation extraction is committed.
+
 ---
 
 ## Summary
