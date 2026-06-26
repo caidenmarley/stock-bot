@@ -1,4 +1,5 @@
 #include "model/trainer.h"
+#include "model/metrics.h"
 #include <iostream>
 #include <iomanip>
 #include <cmath>
@@ -230,6 +231,16 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
             << " | best val: " << std::fixed << std::setprecision(6)
             << bestValLoss << " (ep " << bestEpoch << ")"
             << std::endl;
+
+        metrics::ProfitAndLossParams params{
+            0.001,
+            0.0005, //5 bps per entry/exit
+            252 // 252 trading days per year
+        };
+        metrics::SharpeAndTurnover sharpeAndTurnover = metrics::calcSharpeAndTurnover(valPreds, valTargets, params);
+
+        std::cout << "[PNL] sharpe: " << std::fixed << std::setprecision(2) << sharpeAndTurnover.sharpeNet 
+                  << " | avgTurnover: " <<  std::setprecision(3) << sharpeAndTurnover.avgTurnover << std::endl;
 
         static bool wroteHeader = false;
         static std::ofstream csv("tests/results.csv", std::ios::app);
