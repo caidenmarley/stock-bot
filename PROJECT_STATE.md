@@ -286,10 +286,10 @@ cmake --build . --target testbed
 
 ## What Appears Incomplete
 
-1. ⚠️ **Rolling scaler testing** – Synthetic test exists but no comprehensive validation
-   - No tests for window drop-off behavior
-   - No tests for feature independence
-   - No explicit leakage verification
+1. ⚠️ **Rolling scaler coverage is improved but not exhaustive**
+  - Core rolling behavior is now covered by dedicated tests (Milestone 5)
+  - Remaining gaps: stress/performance on long streams and floating-point stability under extreme magnitudes
+  - Validation-split leakage checks still depend on Trainer/StockData integration tests (Milestone 12)
 
 2. ⚠️ **StockData tests** – Sequence construction not tested
    - No tests for tensor shapes
@@ -533,13 +533,48 @@ cd /home/caidenmarley/stock-bot/build
 - CSV parsing coverage – Numeric types, line endings, and currently-tested edge cases all handled correctly
 - Malformed data handling – Exceptions thrown properly with clear error messages
 
-### **Milestone 5: Rolling Scaler Tests**
-- [ ] Verify scaling correctness:
-  - First value after reset (should be 0 when stddev = 0 for uniform values)
-  - Mean and stddev calculation accuracy
-  - Window drop-off behavior (values entering and leaving the window)
-  - Independence per feature
-  - Confirmation: current day is scaled using window statistics, not future data
+### **Milestone 5: Rolling Scaler Tests** ✅ COMPLETE (June 26, 2026)
+
+**Files Changed** (intentionally modified: 3 files):
+
+- `tests/rolling_window_scaler_test.cpp` (NEW) – Dedicated rolling scaler test suite (8 tests)
+- `CMakeLists.txt` (UPDATED) – Added `rolling_window_scaler_test` executable target
+- `PROJECT_STATE.md` (UPDATED) – Documented Milestone 5 results
+
+**Production code not modified**: No changes to `src/` or `include/` directories
+
+**Build/Run Commands**:
+```bash
+# Configure and build
+cd /home/caidenmarley/stock-bot/build
+cmake ..
+cmake --build . --target rolling_window_scaler_test
+
+# Run tests from repo root
+cd /home/caidenmarley/stock-bot
+./build/rolling_window_scaler_test
+```
+
+**Test Results**: ✅ **8/8 PASSED**
+
+- ✅ **Test 1: First value after reset returns 0** when stddev is 0
+- ✅ **Test 2: Constant feature values scale to 0**
+- ✅ **Test 3: Growing-window mean/stddev correctness** verified with explicit expected values
+- ✅ **Test 4: Window drop-off correctness** verified for window size 3 with values 1,2,3,4
+  - Day 1: 0
+  - Day 2: 1.0
+  - Day 3: ~1.224744871
+  - Day 4: ~1.224744871 (active window [2,3,4])
+- ✅ **Test 5: Per-feature independence** verified
+- ✅ **Test 6: Volume feature inclusion/scaling** verified
+- ✅ **Test 7: `reset()` clears internal state** verified
+- ✅ **Test 8: Current day uses available rolling window only** (no future values)
+
+**No scaler bugs detected by current tests** for covered behaviors.
+
+**Remaining scaler risks (unresolved)**:
+- Not exhaustively proven under extreme numeric ranges or very long sequences
+- Cross-module leakage behavior (Trainer validation preloading) remains a Milestone 12 concern
 
 ### **Milestone 6: StockData Tests**
 - [ ] Verify sequence construction:
@@ -619,26 +654,28 @@ cd /home/caidenmarley/stock-bot/build
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–4 Status**: Build, runtime, and parser verification PASSED ✅
+  - **Milestone 2–5 Status**: Build, runtime, parser, and rolling-scaler verification PASSED ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
-- Single minimal test (testbed) exists and passes; parser_test suite added
+    - Milestone 5: RollingWindowScaler behavior verified (8 dedicated scaler tests all passed)
+- Test suites now include `testbed`, `parser_test`, and `rolling_window_scaler_test`
 - Critical components (LSTM backward, Dense gradients, metrics) implemented but not numerically verified
 - Seed option is implemented and was accepted during the smoke test, but full reproducibility still requires repeated-run comparison
 
 **Main Risks**: 
 - Unverified LSTM gradients, parameter ordering, and data leakage
-- Low test coverage for rolling scaler, StockData, and metrics
+- Low test coverage for StockData, loss/metrics, and gradient correctness
 - Trading metrics are unvalidated and should not be interpreted as profit signals
 
 **Next Actions** (in priority order):
 1. ✅ Verify build and configuration (Milestone 2–3) – **COMPLETE**
 2. ✅ Parser tests (Milestone 4) – **COMPLETE (June 26, 2026)**
-3. Add rolling scaler tests (Milestone 5) – **Next step**
-4. Add numerical gradient checks for Dense and LSTM (Milestone 8–10)
-5. Verify parameter vector ordering consistency (Milestone 9)
-6. Audit training loop and validation logic (Milestone 11–12)
-7. Refactor and document (Milestone 13)
+3. ✅ Rolling scaler tests (Milestone 5) – **COMPLETE (June 26, 2026)**
+4. Add StockData tests (Milestone 6) – **Next step**
+5. Add loss/metrics tests (Milestone 7)
+6. Add numerical gradient checks for Dense and LSTM (Milestone 8–10)
+7. Audit training loop and validation logic (Milestone 11–12)
+8. Refactor and document (Milestone 13)
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.

@@ -27,3 +27,5 @@ add_executable(stock_bot main.cpp ${SRC_FILES})
 add_executable(testbed tests/testbed.cpp ${SRC_FILES})
 # create parser_test exe, cmake --build build --target parser_test
 add_executable(parser_test tests/parser_test.cpp ${SRC_FILES})
+# create rolling_window_scaler_test exe, cmake --build build --target rolling_window_scaler_test
+add_executable(rolling_window_scaler_test tests/rolling_window_scaler_test.cpp ${SRC_FILES})
