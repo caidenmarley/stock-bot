@@ -296,30 +296,35 @@ cmake --build . --target testbed
   - Remaining gaps: deeper numeric validation of scaled input tensor values and stress/performance behavior on large datasets
   - Integration leakage guarantees across train/validation folds still require Milestone 12 validation tests
 
-3. ⚠️ **ML correctness validation** – No numerical gradient checks
+3. ⚠️ **ML correctness validation** – Gradient checks still missing
    - Dense layer: no finite-difference verification
    - LSTM: no gradient check for BPTT
    - Could catch bugs in backprop or parameter vector ordering
 
-4. ⚠️ **Data leakage checks** – Validation scaler usage not verified
+4. ⚠️ **Loss/metrics coverage is improved but not exhaustive**
+  - Huber forward/backward behavior and core metrics pipeline are now covered (Milestone 7)
+  - `predictionsToScaledPositions` is declared in headers but not implemented in source
+  - Trading realism (slippage/model assumptions) still needs review in Milestone 12
+
+5. ⚠️ **Data leakage checks** – Validation scaler usage not verified
    - Does validation data use its own rolling scaler?
    - Does validation scaler peek at future validation data?
    - No tests confirm time-series integrity
 
-5. ⚠️ **Integration tests** – No end-to-end test with real data
+6. ⚠️ **Integration tests** – No end-to-end test with real data
    - Only manual execution of `./stock_bot`
    - No CI/CD or automated test suite
 
-6. ⚠️ **Hyperparameter search** – Exists but not connected to main flow
+7. ⚠️ **Hyperparameter search** – Exists but not connected to main flow
    - Functions in `search/hyperparam_search.h` defined but not called
    - No integration with `main.cpp`
 
-7. ⚠️ **Multi-model ensemble** – Long-term goal, not implemented
+8. ⚠️ **Multi-model ensemble** – Long-term goal, not implemented
    - Sentiment model: planned but not started
    - Source-reliability model: planned but not started
    - Ensemble layer: planned but not started
 
-8. ⚠️ **Web scraping** – Planned for sentiment data, not started
+9. ⚠️ **Web scraping** – Planned for sentiment data, not started
 
 ---
 
@@ -619,16 +624,51 @@ cd /home/caidenmarley/stock-bot
 - Scaled feature values were not exhaustively numerically validated in this milestone (focus was batching/targets/order/error flow)
 - Cross-module concerns (validation scaler preloading and leakage guarantees across folds) remain Milestone 12 work
 
-### **Milestone 7: Loss and Metrics Tests**
-- [ ] Test HuberLossFunction:
-  - Forward pass (quadratic vs. linear terms)
-  - Backward pass (gradient signs)
-  - Batch averaging
-- [ ] Test metrics:
-  - Prediction-to-position conversion
-  - Daily PnL calculation
-  - Turnover calculation
-  - Sharpe ratio (if applicable)
+### **Milestone 7: Loss and Metrics Tests** ✅ COMPLETE (June 26, 2026)
+
+**Files Changed** (intentionally modified: 3 files):
+
+- `tests/loss_metrics_test.cpp` (NEW) – Dedicated Huber loss + metrics test suite (10 tests)
+- `CMakeLists.txt` (UPDATED) – Added `loss_metrics_test` executable target
+- `PROJECT_STATE.md` (UPDATED) – Documented Milestone 7 results
+
+**Production code not modified**: No changes to `src/` or `include/` directories
+
+**Build/Run Commands**:
+```bash
+# Configure and build
+cd /home/caidenmarley/stock-bot/build
+cmake ..
+cmake --build . --target loss_metrics_test
+
+# Run tests from repo root
+cd /home/caidenmarley/stock-bot
+./build/loss_metrics_test
+```
+
+**Test Results**: ✅ **10/10 PASSED**
+
+**Huber loss coverage**:
+- ✅ Forward pass in quadratic region (`|residual| <= delta`) with expected `0.5 * residual^2`
+- ✅ Forward pass in linear region (`|residual| > delta`) with expected `delta * (abs(residual) - 0.5 * delta)`
+- ✅ Batch averaging equals mean of per-example Huber losses
+- ✅ Backward gradient sign in quadratic region is correct (`dL/dprediction = -residual / n`)
+- ✅ Backward gradient magnitude clips to `delta / n` in linear region
+
+**Metrics coverage**:
+- ✅ `predictionsToPositions`: `prediction > threshold` maps to `1.0`, otherwise `0.0`
+- ✅ `calcDailyPnLAndTurnover`: gross return, turnover, trading costs, and net return match hand-calculated values
+- ✅ `mean` and sample `stddev` (Bessel correction) match expected values
+- ✅ `sharpe`: returns `0.0` for too-small input/zero stddev and matches a simple non-zero case
+- ✅ `calcSharpeAndTurnover`: end-to-end pipeline (`predictions -> positions -> net returns -> sharpe/turnover`) matches expected values
+
+**No Huber/metrics bugs detected by current tests** for covered cases.
+
+**Huber/metrics behavior is tested for covered cases, not exhaustively proven.**
+
+**Remaining Huber/metrics risks (unresolved)**:
+- `predictionsToScaledPositions` remains declared but not implemented in `metrics.cpp` (not invoked in tests)
+- Trading metrics are mathematically validated for tested formulas, but still not proof of real-world profitability
 
 ### **Milestone 8: Dense Layer Gradient Check**
 - [ ] Numerical gradient check:
@@ -688,19 +728,20 @@ cd /home/caidenmarley/stock-bot
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–6 Status**: Build, runtime, parser, rolling-scaler, and StockData verification PASSED ✅
+  - **Milestone 2–7 Status**: Build, runtime, parser, rolling-scaler, StockData, and loss/metrics verification PASSED ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
     - Milestone 5: RollingWindowScaler behavior verified (8 dedicated scaler tests all passed)
     - Milestone 6: StockData behavior verified (9 dedicated StockData tests all passed)
-  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, and `stock_data_test`
-- Critical components (LSTM backward, Dense gradients, metrics) implemented but not numerically verified
+    - Milestone 7: Huber loss and metrics behavior verified (10 dedicated loss/metrics tests all passed)
+  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, and `loss_metrics_test`
+- Critical components (LSTM backward and Dense gradients) are implemented but not numerically verified
 - Seed option is implemented and was accepted during the smoke test, but full reproducibility still requires repeated-run comparison
 
 **Main Risks**: 
 - Unverified LSTM gradients, parameter ordering, and data leakage
-- Low test coverage for loss/metrics and gradient correctness
+- Low test coverage for gradient correctness and end-to-end validation integrity
 - Trading metrics are unvalidated and should not be interpreted as profit signals
 
 **Next Actions** (in priority order):
@@ -708,8 +749,8 @@ cd /home/caidenmarley/stock-bot
 2. ✅ Parser tests (Milestone 4) – **COMPLETE (June 26, 2026)**
 3. ✅ Rolling scaler tests (Milestone 5) – **COMPLETE (June 26, 2026)**
 4. ✅ StockData tests (Milestone 6) – **COMPLETE (June 26, 2026)**
-5. Add loss/metrics tests (Milestone 7) – **Next step**
-6. Add numerical gradient checks for Dense and LSTM (Milestone 8–10)
+5. ✅ Loss/metrics tests (Milestone 7) – **COMPLETE (June 26, 2026)**
+6. Add numerical gradient checks for Dense and LSTM (Milestone 8–10) – **Next step**
 7. Audit training loop and validation logic (Milestone 11–12)
 8. Refactor and document (Milestone 13)
 
