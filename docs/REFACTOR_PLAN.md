@@ -107,11 +107,13 @@ Each task should be executed in a small, reviewable, separate commit/branch with
 - Production code changes expected: No (test expansion first).
 
 ### Task: Add reproducibility test for fixed seed
+- Status: Completed for currently supported component-level guarantees (see `tests/reproducibility_test.cpp`).
 - Motivation: Seed handling exists, but repeated-run equivalence has not been fully verified.
 - Files likely touched: new test or script under `tests/` and possibly documentation.
 - Risk level: Medium.
 - Suggested validation command:
-  - run deterministic configuration twice and compare outputs/artifacts.
+  - `cd build && cmake .. && cmake --build . --target reproducibility_test && cd .. && ./build/reproducibility_test`
+  - `ctest --test-dir build --output-on-failure`
 - Production code changes expected: No (test/script first).
 
 ### Task: Clarify hyperparameter search status and randomSearch decision
@@ -142,8 +144,8 @@ Each task should be executed in a small, reviewable, separate commit/branch with
 ## 4. Recommended Next Actual Code Change
 
 Recommended first follow-up task after planning:
-- Generated-file hygiene for `tests/results.csv`, starting with index hygiene if it is currently tracked.
+- Broader LSTM gradient coverage across additional shapes/sequences/loss setups.
 
 Reason:
-- Low risk, high workflow value, and no model-behavior change.
-- Reduces noisy diffs before deeper refactor work.
+- Reproducibility baseline checks are now in place for supported guarantees.
+- Expanding LSTM gradient coverage is the next likely high-value correctness step while keeping changes test-first.

@@ -1053,13 +1053,46 @@ ctest --test-dir build --output-on-failure
 **No production code changed**:
 - No changes to `src/`, `include/`, `tests/`, `CMakeLists.txt`, or `main.cpp` were made in this cleanup milestone.
 
+### **Milestone 13E: Same-Seed Reproducibility Verification** ✅ COMPLETE (June 26, 2026)
+
+**Scope**: Test/audit milestone to verify currently supported reproducibility guarantees without changing production behavior.
+
+**Files Changed**:
+- `tests/reproducibility_test.cpp` (NEW)
+- `CMakeLists.txt` (added `reproducibility_test` target, CTest registration, and `run_tests` dependency)
+- `docs/ML_CORRECTNESS.md` (added reproducibility verification scope)
+- `docs/KNOWN_RISKS.md` (updated reproducibility risk wording)
+- `docs/REFACTOR_PLAN.md` (marked reproducibility test task complete; moved next likely follow-up to broader LSTM gradient coverage)
+- `PROJECT_STATE.md` (this milestone note)
+
+**Commands Used**:
+```bash
+cd /home/caidenmarley/stock-bot/build
+cmake ..
+cmake --build . --target run_tests
+
+cd /home/caidenmarley/stock-bot
+ctest --test-dir build --output-on-failure
+```
+
+**Result**: ✅ **ALL REGISTERED TESTS PASSED (10/10)**
+
+**What reproducibility is now verified**:
+- Same LSTM global seed + same LSTM dimensions -> identical initial LSTM parameter vectors for tested cases.
+- Different LSTM seeds -> different initial LSTM parameter vectors for tested cases.
+- Same LSTM parameters + same fixed input sequence -> identical forward outputs (deterministic forward path after reset).
+
+**What remains unverified**:
+- Full end-to-end `stock_bot` determinism across runs is not exhaustively proven.
+- Not all stochastic paths are validated under one unified same-seed guarantee in current implementation.
+
 ---
 
 ## Summary
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–13D Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, and documentation cleanup are complete ✅
+  - **Milestone 2–13E Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, and reproducibility verification are complete ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -1075,7 +1108,8 @@ ctest --test-dir build --output-on-failure
     - Milestone 13B: Refactor planning completed (`docs/REFACTOR_PLAN.md`)
     - Milestone 13C: CTest full-suite runner completed (single-command `ctest --output-on-failure` workflow)
     - Milestone 13D: Documentation cleanup completed
-  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, and `time_series_validation_test`
+    - Milestone 13E: Same-seed reproducibility verification completed (`reproducibility_test`)
+  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, and `reproducibility_test`
 - LSTM backward/BPTT now has tiny-case numerical verification; broader-case verification is still pending
 - Seed option is implemented and was accepted during the smoke test, but full reproducibility still requires repeated-run comparison
 
@@ -1099,7 +1133,7 @@ ctest --test-dir build --output-on-failure
 12. ✅ Refactor planning (Milestone 13B) – **COMPLETE (June 26, 2026)**
 13. ✅ CTest full-suite runner (Milestone 13C) – **COMPLETE (June 26, 2026)**
 14. Generated-file hygiene for `tests/results.csv` (index/untracking cleanup) – **COMPLETE**
-15. Reproducibility test for same seed (recommended next low-risk code/test task) – **Next step**
-16. Broader LSTM gradient coverage across additional shapes/sequences/loss setups – **Planned**
+15. ✅ Reproducibility test for same seed (Milestone 13E component-level scope) – **COMPLETE (June 26, 2026)**
+16. Broader LSTM gradient coverage across additional shapes/sequences/loss setups – **Next step**
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.

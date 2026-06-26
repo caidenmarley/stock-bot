@@ -2,7 +2,7 @@
 
 ## Current Validation and Test Coverage
 
-The following areas have dedicated coverage from milestones 4-12:
+The following areas have dedicated coverage from milestones 4-13:
 - Parser behavior (`parser_test`)
 - Rolling scaler behavior (`rolling_window_scaler_test`)
 - StockData batching and target alignment basics (`stock_data_test`)
@@ -11,6 +11,7 @@ The following areas have dedicated coverage from milestones 4-12:
 - LSTM parameter ordering/vector consistency (`lstm_parameter_order_test`)
 - LSTM tiny-case BPTT finite-difference gradient check (`lstm_gradient_test`)
 - Time-series validation checks (`time_series_validation_test`)
+- Reproducibility checks for currently supported seed/path guarantees (`reproducibility_test`)
 
 Coverage improves confidence for inspected paths and tested cases, but does not prove complete correctness.
 
@@ -52,6 +53,19 @@ This is still limited-scope coverage and not exhaustive across shapes, sequence 
 - Validation scaler past-context preload assumption: validation scaler is preloaded from training tail to provide context before validation-day processing.
 
 Both assumptions are intentional in current design and should remain explicit in documentation.
+
+## Reproducibility Verification (Current Scope)
+
+The reproducibility test currently verifies these component-level guarantees:
+- Same `LSTMCell::setGlobalInitSeed(seed)` + same LSTM dimensions -> identical initial LSTM parameter vector.
+- Different LSTM seeds -> different initial LSTM parameter vectors for tested cases.
+- Same LSTM parameters + same fixed input sequence -> identical forward outputs (deterministic forward path after reset).
+
+What this does not prove yet:
+- Full end-to-end `stock_bot` run determinism across process runs.
+- Determinism of all randomness across the entire training stack.
+
+In particular, current seeding in `main.cpp` is wired to LSTM initialization, while other components (such as Dense initialization path) are not explicitly tied to the same seed path in the current implementation.
 
 ## Confidence Statement
 
