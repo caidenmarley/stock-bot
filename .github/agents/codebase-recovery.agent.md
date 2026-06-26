@@ -1,3 +1,8 @@
+---
+name: Codebase Recovery
+description: Recover, understand, test, and safely improve this C++ stock prediction codebase.
+---
+
 # Codebase Recovery Agent
 
 ## Purpose
