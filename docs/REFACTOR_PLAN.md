@@ -44,12 +44,13 @@ Each task should be executed in a small, reviewable, separate commit/branch with
 - Production code changes expected: No.
 
 ### Task: Add a simple top-level test command/target
+- Status: Completed in follow-up infrastructure task (CTest registration + `run_tests` target).
 - Motivation: Running all test executables manually is error-prone and slow for iteration.
-- Files likely touched: `CMakeLists.txt` and/or a small script under `scripts/`.
+- Files likely touched: `CMakeLists.txt` and `docs/BUILD.md`.
 - Risk level: Low.
 - Suggested validation command:
-  - `cd build && cmake .. && cmake --build . --target <new_test_aggregate_target>`
-  - run the aggregate test command and verify non-zero exit on failure.
+  - `cd build && cmake .. && cmake --build . --target run_tests`
+  - `ctest --test-dir build --output-on-failure`
 - Production code changes expected: No.
 
 ### Task: Clean up PROJECT_STATE.md numbering and stale duplicate checklist content

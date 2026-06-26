@@ -20,6 +20,7 @@ file(GLOB_RECURSE SRC_FILES
 
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 include_directories(${EIGEN3_INCLUDE_DIR})
+enable_testing()
 
 # create main exe, cmake --build build --target stock_bot
 add_executable(stock_bot main.cpp ${SRC_FILES})
@@ -41,3 +42,27 @@ add_executable(lstm_parameter_order_test tests/lstm_parameter_order_test.cpp ${S
 add_executable(lstm_gradient_test tests/lstm_gradient_test.cpp ${SRC_FILES})
 # create time_series_validation_test exe, cmake --build build --target time_series_validation_test
 add_executable(time_series_validation_test tests/time_series_validation_test.cpp ${SRC_FILES})
+
+add_test(NAME testbed COMMAND testbed)
+add_test(NAME parser_test COMMAND parser_test)
+add_test(NAME rolling_window_scaler_test COMMAND rolling_window_scaler_test)
+add_test(NAME stock_data_test COMMAND stock_data_test)
+add_test(NAME loss_metrics_test COMMAND loss_metrics_test)
+add_test(NAME dense_gradient_test COMMAND dense_gradient_test)
+add_test(NAME lstm_parameter_order_test COMMAND lstm_parameter_order_test)
+add_test(NAME lstm_gradient_test COMMAND lstm_gradient_test)
+add_test(NAME time_series_validation_test COMMAND time_series_validation_test)
+
+add_custom_target(run_tests
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+    DEPENDS
+        testbed
+        parser_test
+        rolling_window_scaler_test
+        stock_data_test
+        loss_metrics_test
+        dense_gradient_test
+        lstm_parameter_order_test
+        lstm_gradient_test
+        time_series_validation_test
+)

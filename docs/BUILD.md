@@ -40,6 +40,13 @@ cmake --build . --target lstm_gradient_test
 cmake --build . --target time_series_validation_test
 ```
 
+Build and run all registered tests in one command:
+
+```bash
+cd /home/caidenmarley/stock-bot/build
+cmake --build . --target run_tests
+```
+
 ## Run
 
 From repository root:
@@ -56,6 +63,16 @@ cd /home/caidenmarley/stock-bot
 ./build/lstm_parameter_order_test
 ./build/lstm_gradient_test
 ./build/time_series_validation_test
+```
+
+Run the full suite through CTest (recommended):
+
+```bash
+cd /home/caidenmarley/stock-bot/build
+ctest --output-on-failure
+
+# or from repository root
+ctest --test-dir build --output-on-failure
 ```
 
 ## Generated Results Files

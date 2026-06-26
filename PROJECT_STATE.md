@@ -1019,6 +1019,30 @@ cd /home/caidenmarley/stock-bot
 **Recommended first follow-up task**:
 - Generated-file hygiene for `tests/results.csv` (especially index/untracking hygiene if it is currently tracked) before larger refactor items.
 
+### **Milestone 13C: Test Infrastructure Convenience (CTest Full Suite Command)** ✅ COMPLETE (June 26, 2026)
+
+**Scope**: Infrastructure-only update to run the current standalone test executables through one CTest command.
+
+**Files Changed**:
+- `CMakeLists.txt` (added `enable_testing()`, `add_test(...)` registrations, and `run_tests` custom target)
+- `docs/BUILD.md` (documented full-suite CTest commands and `run_tests` target)
+- `docs/REFACTOR_PLAN.md` (marked top-level test command/target task as completed)
+- `PROJECT_STATE.md` (this milestone note)
+
+**Commands Used**:
+```bash
+cd /home/caidenmarley/stock-bot/build
+cmake ..
+cmake --build . --target run_tests
+
+ctest --test-dir build --output-on-failure
+```
+
+**Result**: ✅ **ALL REGISTERED TESTS PASSED (9/9)**
+
+**Note**:
+- This improves test-running convenience and consistency; it does not by itself increase model correctness guarantees.
+
 ---
 
 ## Summary
