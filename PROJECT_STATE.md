@@ -276,11 +276,11 @@ cmake --build . --target testbed
 8. ✅ **AdaBelief optimizer** – Parameter updates with bias correction
 9. ✅ **Training loop** – Epoch iteration, batch processing, validation
 10. ✅ **Learning rate decay** – Halves LR on validation plateau
-13. ✅ **Gradient clipping** – Prevents exploding gradients (implementation present)
+11. ✅ **Gradient clipping** – Prevents exploding gradients (implementation present)
 12. ✅ **Early stopping** – Halts if no improvement for N epochs
 13. ✅ **Rolling validation folds** – 3 time-ordered splits (60%, 70%, 80%)
-15. ✅ **Build system** – CMake configuration with Eigen3 dependency (Milestone 2: Build Verification PASSED on June 26, 2026)
-16. ✅ **Reproducibility** – Seed setting via `LSTMCell::setGlobalInitSeed()` (implementation present but full reproducibility not yet verified)
+14. ✅ **Build system** – CMake configuration with Eigen3 dependency (Milestone 2: Build Verification PASSED on June 26, 2026)
+15. ✅ **Reproducibility hooks** – Seed setting via `LSTMCell::setGlobalInitSeed()` is implemented (full same-seed reproducibility is still pending verification)
 
 ---
 
@@ -758,8 +758,8 @@ cd /home/caidenmarley/stock-bot
 - Per recovery rules, production code was not modified.
 
 **Remaining LSTM parameter-order risks (unresolved)**:
-- Flat ordering appears internally consistent for covered checks, but LSTM numerical gradient correctness is still unverified
-- Full LSTM numerical gradient checking remains Milestone 10
+- Flat ordering appears internally consistent for covered checks
+- At this milestone stage, broader LSTM numerical gradient coverage was still pending; Milestone 10 later added a tiny-case finite-difference check
 
 ### **Milestone 10: LSTM Gradient Check** ✅ COMPLETE (June 26, 2026)
 
@@ -1043,13 +1043,23 @@ ctest --test-dir build --output-on-failure
 **Note**:
 - This improves test-running convenience and consistency; it does not by itself increase model correctness guarantees.
 
+### **Milestone 13D: Documentation Cleanup** ✅ COMPLETE (June 26, 2026)
+
+**Documentation cleanup completed**.
+
+**Files Changed**:
+- `PROJECT_STATE.md` (stale numbering/summary/next-actions wording cleanup)
+
+**No production code changed**:
+- No changes to `src/`, `include/`, `tests/`, `CMakeLists.txt`, or `main.cpp` were made in this cleanup milestone.
+
 ---
 
 ## Summary
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–12 Status**: Build, runtime, parser, rolling-scaler, StockData, loss/metrics, Dense gradient, LSTM parameter-order checks, tiny-case LSTM gradient verification, training-loop review, and time-series validation review PASSED ✅
+  - **Milestone 2–13D Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, and documentation cleanup are complete ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -1061,6 +1071,10 @@ ctest --test-dir build --output-on-failure
     - Milestone 10: LSTM tiny-case finite-difference gradient check verified (1 dedicated test passed)
     - Milestone 11: Training-loop review completed; no clear bug found for inspected paths (review-only, not exhaustive)
     - Milestone 12: Time-series validation review completed; no clear future-data leakage found for inspected paths (review + focused synthetic tests)
+    - Milestone 13A: Documentation extraction completed (`docs/BUILD.md`, `docs/ARCHITECTURE.md`, `docs/ML_CORRECTNESS.md`, `docs/KNOWN_RISKS.md`)
+    - Milestone 13B: Refactor planning completed (`docs/REFACTOR_PLAN.md`)
+    - Milestone 13C: CTest full-suite runner completed (single-command `ctest --output-on-failure` workflow)
+    - Milestone 13D: Documentation cleanup completed
   - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, and `time_series_validation_test`
 - LSTM backward/BPTT now has tiny-case numerical verification; broader-case verification is still pending
 - Seed option is implemented and was accepted during the smoke test, but full reproducibility still requires repeated-run comparison
@@ -1081,6 +1095,11 @@ ctest --test-dir build --output-on-failure
 8. ✅ LSTM gradient check (Milestone 10) – **COMPLETE (June 26, 2026)**
 9. ✅ Training loop review (Milestone 11) – **COMPLETE (June 26, 2026)**
 10. ✅ Time-series validation review (Milestone 12) – **COMPLETE (June 26, 2026)**
-11. Refactor and document (Milestone 13)
+11. ✅ Documentation extraction (Milestone 13A) – **COMPLETE (June 26, 2026)**
+12. ✅ Refactor planning (Milestone 13B) – **COMPLETE (June 26, 2026)**
+13. ✅ CTest full-suite runner (Milestone 13C) – **COMPLETE (June 26, 2026)**
+14. Generated-file hygiene for `tests/results.csv` (index/untracking cleanup) – **COMPLETE**
+15. Reproducibility test for same seed (recommended next low-risk code/test task) – **Next step**
+16. Broader LSTM gradient coverage across additional shapes/sequences/loss setups – **Planned**
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.

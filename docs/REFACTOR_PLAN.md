@@ -54,6 +54,7 @@ Each task should be executed in a small, reviewable, separate commit/branch with
 - Production code changes expected: No.
 
 ### Task: Clean up PROJECT_STATE.md numbering and stale duplicate checklist content
+- Status: Completed in documentation cleanup follow-up (Milestone 13D).
 - Motivation: Improves readability and reduces confusion while preserving evidence history.
 - Files likely touched: `PROJECT_STATE.md`.
 - Risk level: Low.
