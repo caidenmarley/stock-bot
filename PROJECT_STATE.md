@@ -307,10 +307,11 @@ cmake --build . --target testbed
   - `predictionsToScaledPositions` is declared in headers but not implemented in source
   - Trading realism (slippage/model assumptions) still needs review in Milestone 12
 
-5. ⚠️ **Data leakage checks** – Validation scaler usage not verified
-   - Does validation data use its own rolling scaler?
-   - Does validation scaler peek at future validation data?
-   - No tests confirm time-series integrity
+5. ⚠️ **Time-series validation coverage is improved but not exhaustive**
+  - Milestone 12 found no clear future-data leakage for inspected paths.
+  - Past-context validation scaler preloading appears intentional.
+  - Focused synthetic tests now cover split ordering, sequential validation batching, target alignment, and early-window no-future influence checks.
+  - Full end-to-end validation integrity is still not exhaustively proven.
 
 6. ⚠️ **Integration tests** – No end-to-end test with real data
    - Only manual execution of `./stock_bot`
@@ -335,10 +336,12 @@ cmake --build . --target testbed
 - **Risk**: Validation data might use future information in scaling or batching
 - **Current Status**: 
   - Training and validation splits are correctly ordered
-  - Trainer preloads validation scaler using training data tail (intentional design to provide context)
-  - Rolling scaler is applied independently to each fold
-  - Need to verify: Preloading strategy prevents future leakage while preserving scaler context
-- **Mitigation**: Add explicit tests for scaler state isolation and preloading correctness
+  - Milestone 12 audit and focused synthetic tests passed for covered checks
+  - No clear future-data leakage detected for inspected paths
+  - Trainer preloads validation scaler using training data tail; past-context preloading appears intentional
+  - Validation ranges are nested/overlapping by design and current-day scaling remains a modelling/evaluation assumption
+  - Not exhaustively proven
+- **Mitigation**: Keep leakage-focused regression tests and expand end-to-end fold-level validation integrity checks
 
 ### 2. **LSTM Gradient Correctness** (Critical)
 - **Risk**: BPTT implementation might have sign errors or off-by-one bugs
@@ -889,13 +892,80 @@ cd /home/caidenmarley/stock-bot
 - Not exhaustively proven.
 - Remaining concerns are primarily around clipping policy consistency and generated-results file hygiene, not a confirmed math/control-flow defect.
 
-### **Milestone 12: Time-Series Validation Review**
-- [ ] Verify no data leakage:
-  - [ ] Training data precedes validation data (no shuffling)
-  - [ ] Validation rolling scaler may be preloaded with past training data as context, but must not see future validation data
-  - [ ] Validation batches are contiguous and sequential
-  - [ ] Rolling validation folds executed with time-ordered train/validation splits; validation ranges are nested/overlapping by design and should be reviewed later
-- [ ] Add integration test for 3-fold validation integrity
+### **Milestone 12: Time-Series Validation Review** ✅ COMPLETE (June 26, 2026)
+
+**Scope**: Validation-integrity audit and focused synthetic testing only. No production code changes were made.
+
+**Files Inspected**:
+- `main.cpp`
+- `src/model/trainer.cpp`
+- `include/model/trainer.h`
+- `src/inputs/stock_data.cpp`
+- `include/inputs/stock_data.h`
+- `src/inputs/rolling_window_scaler.cpp`
+- `include/inputs/rolling_window_scaler.h`
+- `.gitignore`
+
+**Files Changed**:
+- `tests/time_series_validation_test.cpp` (NEW)
+- `CMakeLists.txt` (added test target)
+- `PROJECT_STATE.md` (this milestone update)
+
+**Build/Run Commands Used**:
+```bash
+cd /home/caidenmarley/stock-bot/build
+cmake ..
+cmake --build . --target time_series_validation_test
+
+cd /home/caidenmarley/stock-bot
+./build/time_series_validation_test
+```
+
+**Test Result**: ✅ **3/3 PASSED**
+
+- `[PASS] fold split ordering and overlap`
+- `[PASS] validation batching and target alignment`
+- `[PASS] validation preloading no future influence on early windows`
+
+**Time-series validation review findings**:
+
+1. **Fold split ordering**
+- `main.cpp` constructs folds at 60%, 70%, and 80% of `maxStartSequence = rawSize - sequenceLength`.
+- For each fold, training is `[0, splitStart)` and validation is `[splitStart, rawSize)`, so training data precedes validation data in time.
+- Validation ranges are time-ordered and nested/overlapping by design (later folds are tail subsets of earlier validation ranges).
+- This is acceptable for expanding-window style evaluation, but fold dependence should remain documented when interpreting aggregate metrics.
+
+2. **Validation scaler preloading**
+- In `Trainer` constructor, validation scaler is preloaded with only the tail of training data (`max(windowSize, split)` constrained to pre-split indices).
+- Validation rows are then processed in-order during `StockData` construction; no direct path was found where future validation rows are used to scale earlier validation rows.
+- Past-context validation scaler preloading appears intentional.
+
+3. **StockData scaling behavior**
+- `StockData` calls `scaler.add(rawData[day])` and then `scaledValuesPerDay()` for that same day.
+- This means current-day features are scaled using a window containing current day + prior days (bounded by `windowSize`).
+- Current-day scaling is a modelling assumption for next-day prediction and should remain documented.
+
+4. **Validation batching**
+- Validation path in `Trainer::run` uses sequential `nextBatch()` with `hasAnotherBatch()`.
+- Training path uses shuffled order with `nextBatchShuffled(...)`.
+- This matches current design.
+
+5. **Target alignment**
+- `StockData` targets are computed as next-day return from the sequence end day: `(close[t+1] - close[t]) / close[t]`.
+- Milestone 6 evidence and Milestone 12 synthetic test support that validation targets follow the same next-day alignment logic.
+- Full end-to-end target integrity across all folds is still not exhaustively proven.
+
+6. **Results/logging hygiene**
+- Trainer writes/appends epoch metrics to `tests/results.csv`; `main.cpp` truncates that file at startup.
+- `.gitignore` includes `tests/results.csv`.
+- `tests/results.csv` is currently tracked by git (verified via `git ls-files`), so it can still appear modified despite ignore rules.
+- Recommended hygiene (no code change applied in this milestone): untrack generated CSVs if the team wants clean status by default.
+
+**Milestone 12 Conclusion**:
+- No clear future-data leakage detected for inspected paths.
+- Past-context validation scaler preloading appears intentional.
+- Current-day scaling is a modelling assumption for next-day prediction and should remain documented.
+- Not exhaustively proven.
 
 ### **Milestone 13: Refactor and Documentation**
 - [ ] After tests pass, refactor if needed:
@@ -915,7 +985,7 @@ cd /home/caidenmarley/stock-bot
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–11 Status**: Build, runtime, parser, rolling-scaler, StockData, loss/metrics, Dense gradient, LSTM parameter-order checks, tiny-case LSTM gradient verification, and training-loop review PASSED ✅
+  - **Milestone 2–12 Status**: Build, runtime, parser, rolling-scaler, StockData, loss/metrics, Dense gradient, LSTM parameter-order checks, tiny-case LSTM gradient verification, training-loop review, and time-series validation review PASSED ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -926,12 +996,13 @@ cd /home/caidenmarley/stock-bot
     - Milestone 9: LSTM parameter ordering consistency verified (6/6 tests passed)
     - Milestone 10: LSTM tiny-case finite-difference gradient check verified (1 dedicated test passed)
     - Milestone 11: Training-loop review completed; no clear bug found for inspected paths (review-only, not exhaustive)
-  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, and `lstm_gradient_test`
+    - Milestone 12: Time-series validation review completed; no clear future-data leakage found for inspected paths (review + focused synthetic tests)
+  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, and `time_series_validation_test`
 - LSTM backward/BPTT now has tiny-case numerical verification; broader-case verification is still pending
 - Seed option is implemented and was accepted during the smoke test, but full reproducibility still requires repeated-run comparison
 
 **Main Risks**: 
-- Limited-scope LSTM gradient verification (only tiny deterministic case) and data leakage
+- Limited-scope LSTM gradient verification (only tiny deterministic case) and residual validation leakage risk (reduced by Milestone 12 but not exhaustively eliminated)
 - Low coverage for end-to-end validation integrity
 - Trading metrics are unvalidated and should not be interpreted as profit signals
 
@@ -945,7 +1016,7 @@ cd /home/caidenmarley/stock-bot
 7. ✅ LSTM parameter-order checks (Milestone 9) – **COMPLETE (June 26, 2026)**
 8. ✅ LSTM gradient check (Milestone 10) – **COMPLETE (June 26, 2026)**
 9. ✅ Training loop review (Milestone 11) – **COMPLETE (June 26, 2026)**
-10. Time-series validation review (Milestone 12) – **Next step**
+10. ✅ Time-series validation review (Milestone 12) – **COMPLETE (June 26, 2026)**
 11. Refactor and document (Milestone 13)
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.

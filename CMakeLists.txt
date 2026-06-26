@@ -39,3 +39,5 @@ add_executable(dense_gradient_test tests/dense_gradient_test.cpp ${SRC_FILES})
 add_executable(lstm_parameter_order_test tests/lstm_parameter_order_test.cpp ${SRC_FILES})
 # create lstm_gradient_test exe, cmake --build build --target lstm_gradient_test
 add_executable(lstm_gradient_test tests/lstm_gradient_test.cpp ${SRC_FILES})
+# create time_series_validation_test exe, cmake --build build --target time_series_validation_test
+add_executable(time_series_validation_test tests/time_series_validation_test.cpp ${SRC_FILES})
