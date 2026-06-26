@@ -291,10 +291,10 @@ cmake --build . --target testbed
   - Remaining gaps: stress/performance on long streams and floating-point stability under extreme magnitudes
   - Validation-split leakage checks still depend on Trainer/StockData integration tests (Milestone 12)
 
-2. ⚠️ **StockData tests** – Sequence construction not tested
-   - No tests for tensor shapes
-   - No tests for batch slicing
-   - No tests for target alignment
+2. ⚠️ **StockData coverage is improved but not exhaustive**
+  - Core sequence construction, batching, reset/error behavior, target alignment, and shuffled ordering are now covered (Milestone 6)
+  - Remaining gaps: deeper numeric validation of scaled input tensor values and stress/performance behavior on large datasets
+  - Integration leakage guarantees across train/validation folds still require Milestone 12 validation tests
 
 3. ⚠️ **ML correctness validation** – No numerical gradient checks
    - Dense layer: no finite-difference verification
@@ -576,14 +576,48 @@ cd /home/caidenmarley/stock-bot
 - Not exhaustively proven under extreme numeric ranges or very long sequences
 - Cross-module leakage behavior (Trainer validation preloading) remains a Milestone 12 concern
 
-### **Milestone 6: StockData Tests**
-- [ ] Verify sequence construction:
-  - Window count calculation
-  - Tensor shapes ([numWindows, sequenceLength, features])
-  - Batch slicing ([batchSize, ...])
-  - Partial batch handling
-  - Target alignment (next-day return)
-  - No temporal shuffling
+### **Milestone 6: StockData Tests** ✅ COMPLETE (June 26, 2026)
+
+**Files Changed** (intentionally modified: 3 files):
+
+- `tests/stock_data_test.cpp` (NEW) – Dedicated StockData test suite (9 tests)
+- `CMakeLists.txt` (UPDATED) – Added `stock_data_test` executable target
+- `PROJECT_STATE.md` (UPDATED) – Documented Milestone 6 results
+
+**Production code not modified**: No changes to `src/` or `include/` directories
+
+**Build/Run Commands**:
+```bash
+# Configure and build
+cd /home/caidenmarley/stock-bot/build
+cmake ..
+cmake --build . --target stock_data_test
+
+# Run tests from repo root
+cd /home/caidenmarley/stock-bot
+./build/stock_data_test
+```
+
+**Test Results**: ✅ **9/9 PASSED**
+
+- ✅ **Test 1: Constructor rejects too-small datasets** (`numDays < sequenceLength + 1`)
+- ✅ **Test 2: `numWindows = numDays - sequenceLength`**
+- ✅ **Test 3: `nextBatch()` returns expected batch size and expected targets**
+- ✅ **Test 4: Final partial batch works** when `numWindows` is not divisible by `batchSize`
+- ✅ **Test 5: `reset()` restarts batching from the beginning**
+- ✅ **Test 6: `nextBatch()` throws** after all batches are consumed
+- ✅ **Test 7: Target alignment formula is correct**:
+  - `target(seq) = (close[seq + sequenceLength] - close[seq + sequenceLength - 1]) / close[seq + sequenceLength - 1]`
+- ✅ **Test 8: `nextBatchShuffled()` respects provided order**
+- ✅ **Test 9: Input tensor shape is correct** `[currentBatch, sequenceLength, numFeatures]`
+
+**No StockData bugs detected by current tests** for covered cases.
+
+**StockData behavior is tested for covered cases, not exhaustively proven.**
+
+**Remaining StockData risks (unresolved)**:
+- Scaled feature values were not exhaustively numerically validated in this milestone (focus was batching/targets/order/error flow)
+- Cross-module concerns (validation scaler preloading and leakage guarantees across folds) remain Milestone 12 work
 
 ### **Milestone 7: Loss and Metrics Tests**
 - [ ] Test HuberLossFunction:
@@ -654,26 +688,27 @@ cd /home/caidenmarley/stock-bot
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–5 Status**: Build, runtime, parser, and rolling-scaler verification PASSED ✅
+  - **Milestone 2–6 Status**: Build, runtime, parser, rolling-scaler, and StockData verification PASSED ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
     - Milestone 5: RollingWindowScaler behavior verified (8 dedicated scaler tests all passed)
-- Test suites now include `testbed`, `parser_test`, and `rolling_window_scaler_test`
+    - Milestone 6: StockData behavior verified (9 dedicated StockData tests all passed)
+  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, and `stock_data_test`
 - Critical components (LSTM backward, Dense gradients, metrics) implemented but not numerically verified
 - Seed option is implemented and was accepted during the smoke test, but full reproducibility still requires repeated-run comparison
 
 **Main Risks**: 
 - Unverified LSTM gradients, parameter ordering, and data leakage
-- Low test coverage for StockData, loss/metrics, and gradient correctness
+- Low test coverage for loss/metrics and gradient correctness
 - Trading metrics are unvalidated and should not be interpreted as profit signals
 
 **Next Actions** (in priority order):
 1. ✅ Verify build and configuration (Milestone 2–3) – **COMPLETE**
 2. ✅ Parser tests (Milestone 4) – **COMPLETE (June 26, 2026)**
 3. ✅ Rolling scaler tests (Milestone 5) – **COMPLETE (June 26, 2026)**
-4. Add StockData tests (Milestone 6) – **Next step**
-5. Add loss/metrics tests (Milestone 7)
+4. ✅ StockData tests (Milestone 6) – **COMPLETE (June 26, 2026)**
+5. Add loss/metrics tests (Milestone 7) – **Next step**
 6. Add numerical gradient checks for Dense and LSTM (Milestone 8–10)
 7. Audit training loop and validation logic (Milestone 11–12)
 8. Refactor and document (Milestone 13)

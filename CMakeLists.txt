@@ -29,3 +29,5 @@ add_executable(testbed tests/testbed.cpp ${SRC_FILES})
 add_executable(parser_test tests/parser_test.cpp ${SRC_FILES})
 # create rolling_window_scaler_test exe, cmake --build build --target rolling_window_scaler_test
 add_executable(rolling_window_scaler_test tests/rolling_window_scaler_test.cpp ${SRC_FILES})
+# create stock_data_test exe, cmake --build build --target stock_data_test
+add_executable(stock_data_test tests/stock_data_test.cpp ${SRC_FILES})
