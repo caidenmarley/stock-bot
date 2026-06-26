@@ -815,15 +815,79 @@ cd /home/caidenmarley/stock-bot
 - This is a single small-case gradient check; wider coverage (different hidden sizes, longer sequences, and alternate loss setups) is still needed
 - Full training-loop-level LSTM behavior and time-series validation leakage concerns remain Milestone 11–12 scope
 
-### **Milestone 11: Training Loop Review**
-- [ ] Audit training loop:
-  - [ ] Hidden and cell state reset per batch/sequence
-  - [ ] Gradient accumulation during backprop
-  - [ ] Gradient clipping correctness
-  - [ ] LSTM and Dense update correctness
-  - [ ] Learning rate decay logic
-  - [ ] Early stopping logic
-- [ ] Add comments for each step
+### **Milestone 11: Training Loop Review** ✅ COMPLETE (June 26, 2026)
+
+**Scope**: Review-first audit only. No production code changes were made.
+
+**Files Inspected**:
+- `src/model/trainer.cpp`
+- `include/model/trainer.h`
+- `src/model/lstm.cpp`
+- `include/model/lstm.h`
+- `include/model/dense.h`
+- `src/model/huber_loss_function.cpp`
+- `src/model/ada_belief.cpp`
+- `src/inputs/stock_data.cpp`
+- `include/inputs/stock_data.h`
+- `main.cpp`
+- `.gitignore`
+
+**Files Changed**:
+- `PROJECT_STATE.md` (this milestone update only)
+
+**Build/Test Commands Used**:
+- None (review-only milestone; no code execution required)
+
+**Audit Findings (Training Loop)**:
+
+1. **Hidden/cell state reset behavior**
+- In training, `lstm.reset()` is called once per sequence (inside per-example loop) before time-step forward passes.
+- In validation, `lstm.reset()` is also called once per sequence.
+- This means state is reset per sequence, not carried across sequences or batches, which appears consistent with the current window-based sequence design.
+
+2. **Gradient lifecycle**
+- `lstm.zeroGrad()` and `outputLayer.zeroGrad()` are called once per batch, before iterating the sequences in that batch.
+- Within the batch, gradients accumulate intentionally across all sequences/time steps.
+- After parameter updates, next batch starts from zeroed gradients.
+- For inspected paths, accumulation behavior appears intentional rather than accidental.
+
+3. **Backward pass flow**
+- Observed chain is: Huber backward (`dL/dy`) -> Dense backward (accumulate `dW`, `db`) -> LSTM backward through time using `dL/dh = W^T * dL/dy` and reverse-time `backwardPass` calls.
+- LSTM gradients are updated via AdaBelief using flattened parameter/gradient vectors.
+- Dense gradients are updated in a separate SGD-style step (`W -= lr*dW`, `b -= lr*db`).
+- Both LSTM and Dense parameter sets are updated each training batch.
+
+4. **Parameter update flow**
+- LSTM flow: `getParametersVector()` + `getGradientsVector()` -> clip -> `optimiser.update(params, grads)` -> `setParametersVector(params)`.
+- Dense flow: gradient norm clip on `(dW, db)` -> direct learning-rate step.
+- Milestone 9 and 10 evidence supports covered assumptions for parameter ordering and tiny-case gradient behavior; this audit did not re-run those tests.
+
+5. **Gradient clipping**
+- LSTM uses global-norm clipping on the flattened LSTM gradient vector before AdaBelief update.
+- Dense uses separate norm clipping for `dW` and `db` before SGD step.
+- Concern: clipping is not performed as one combined model-wide norm across LSTM + Dense together; clipping is component-wise. This may be acceptable by design, but should remain a documented risk/assumption.
+
+6. **Training vs validation behavior**
+- Training uses shuffled sequence order via `nextBatchShuffled(...)`.
+- Validation uses sequential contiguous batches via `nextBatch()` and `hasAnotherBatch()`.
+- Validation loop performs forward/loss/metrics only; no optimizer updates and no backward calls are made.
+
+7. **Learning rate decay and early stopping**
+- If validation does not improve by tolerance, `noImproveCount` increments.
+- At patience threshold, LR decays (bounded by `minLR`) while decay tries remain; otherwise training stops early.
+- On decay, both AdaBelief LR and Dense LR are decayed, and `noImproveCount` resets.
+- No clear off-by-one bug was detected in inspected control flow, but behavior remains policy-sensitive and not exhaustively proven.
+
+8. **Results/logging behavior**
+- Trainer appends epoch metrics to `tests/results.csv`.
+- `main.cpp` truncates `tests/results.csv` at startup.
+- `.gitignore` includes `tests/results.csv`; however, the file is currently present in the repository and will still show modifications if tracked. This is a workflow hygiene concern for generated artifacts.
+
+**Milestone 11 Conclusion**:
+- No clear training-loop bug detected during this audit.
+- Behavior appears consistent with current design for inspected paths.
+- Not exhaustively proven.
+- Remaining concerns are primarily around clipping policy consistency and generated-results file hygiene, not a confirmed math/control-flow defect.
 
 ### **Milestone 12: Time-Series Validation Review**
 - [ ] Verify no data leakage:
@@ -851,7 +915,7 @@ cd /home/caidenmarley/stock-bot
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–10 Status**: Build, runtime, parser, rolling-scaler, StockData, loss/metrics, Dense gradient, and tiny-case LSTM gradient verification PASSED ✅
+  - **Milestone 2–11 Status**: Build, runtime, parser, rolling-scaler, StockData, loss/metrics, Dense gradient, LSTM parameter-order checks, tiny-case LSTM gradient verification, and training-loop review PASSED ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -859,8 +923,9 @@ cd /home/caidenmarley/stock-bot
     - Milestone 6: StockData behavior verified (9 dedicated StockData tests all passed)
     - Milestone 7: Huber loss and metrics behavior verified (10 dedicated loss/metrics tests all passed)
     - Milestone 8: Dense backward gradient check verified (6 dedicated Dense gradient tests all passed)
+    - Milestone 9: LSTM parameter ordering consistency verified (6/6 tests passed)
     - Milestone 10: LSTM tiny-case finite-difference gradient check verified (1 dedicated test passed)
-  - Milestone 9: LSTM parameter ordering consistency verified (6/6 tests passed)
+    - Milestone 11: Training-loop review completed; no clear bug found for inspected paths (review-only, not exhaustive)
   - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, and `lstm_gradient_test`
 - LSTM backward/BPTT now has tiny-case numerical verification; broader-case verification is still pending
 - Seed option is implemented and was accepted during the smoke test, but full reproducibility still requires repeated-run comparison
@@ -879,7 +944,8 @@ cd /home/caidenmarley/stock-bot
 6. ✅ Dense gradient check (Milestone 8) – **COMPLETE (June 26, 2026)**
 7. ✅ LSTM parameter-order checks (Milestone 9) – **COMPLETE (June 26, 2026)**
 8. ✅ LSTM gradient check (Milestone 10) – **COMPLETE (June 26, 2026)**
-9. Audit training loop and validation logic (Milestone 11–12) – **Next step**
-10. Refactor and document (Milestone 13)
+9. ✅ Training loop review (Milestone 11) – **COMPLETE (June 26, 2026)**
+10. Time-series validation review (Milestone 12) – **Next step**
+11. Refactor and document (Milestone 13)
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.
