@@ -25,3 +25,5 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 add_executable(stock_bot main.cpp ${SRC_FILES})
 # create testbed exe, cmake --build build --target testbed
 add_executable(testbed tests/testbed.cpp ${SRC_FILES})
+# create parser_test exe, cmake --build build --target parser_test
+add_executable(parser_test tests/parser_test.cpp ${SRC_FILES})
