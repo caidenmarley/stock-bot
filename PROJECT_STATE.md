@@ -1173,13 +1173,66 @@ cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
 - Integration confidence improved for a deterministic cross-component validation path.
 - This does **not** prove exhaustive validation integrity, exhaustive training-path correctness, full end-to-end determinism, or profitability.
 
+### **Milestone 13H: Full End-to-End Determinism Audit (Current Supported Scope)** ✅ COMPLETE (July 4, 2026)
+
+**Scope**: Audit/test-first determinism verification for the strongest currently controllable in-memory numerical pipeline path.
+
+**Files Changed**:
+- `tests/end_to_end_determinism_test.cpp` (NEW determinism audit test)
+- `CMakeLists.txt` (added `end_to_end_determinism_test` target, CTest registration, and `run_tests` dependency)
+- `docs/BUILD.md` (added build/run references for `end_to_end_determinism_test`)
+- `docs/ML_CORRECTNESS.md` (updated determinism verification scope and boundaries)
+- `docs/KNOWN_RISKS.md` (updated determinism-risk wording with specific blockers)
+- `docs/REFACTOR_PLAN.md` (marked determinism audit complete and set next low-risk follow-up)
+- `PROJECT_STATE.md` (this milestone note)
+
+**No production code changed**:
+- No changes to `src/`, `include/`, `main.cpp`, or model/input/search implementations.
+
+**Deterministic path tested**:
+1. Synthetic chronological in-memory data split into train/validation.
+2. Deterministic rolling scaling and `StockData` construction across repeated runs.
+3. Deterministic `nextBatchShuffled` behavior under fixed explicit order.
+4. LSTM initialization controlled by `LSTMCell::setGlobalInitSeed(...)`.
+5. Dense initialization controlled in test scope by explicit deterministic parameter override.
+6. Repeated deterministic forward/loss path checks before update.
+7. One tiny deterministic training-style update path (Huber backward + Dense backward + LSTM backward + AdaBelief/SGD update).
+8. Repeated-run equality checks after update for predictions, losses, and model parameters.
+
+**Commands Used**:
+```bash
+cd /home/caidenmarley/stock-bot && cmake --build build --target end_to_end_determinism_test
+cd /home/caidenmarley/stock-bot && ./build/end_to_end_determinism_test
+cd /home/caidenmarley/stock-bot && cmake --build build --target run_tests
+cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
+```
+
+**Results**:
+- `./build/end_to_end_determinism_test`: ✅ **2/2 PASSED**
+- `cmake --build build --target run_tests`: ✅ built and executed registered tests successfully
+- `ctest --test-dir build --output-on-failure`: ✅ **12/12 tests passed**
+
+**What determinism is now verified**:
+- Same-seed repeated runs are deterministic for the covered in-memory path when model states, ordering, and update steps are explicitly controlled.
+- Different LSTM seeds change initial LSTM parameter vectors in this controlled path.
+
+**What remains unverified / blockers for stronger claims**:
+- Full executable-level determinism of `stock_bot` across process runs is still not exhaustively proven.
+- Dense has no production seed API; deterministic Dense initialization currently requires explicit parameter override in tests.
+- `Trainer::run` uses internal static thread-local shuffle RNG state and does not expose external seed control for shuffle order via CLI seed.
+- Trainer writes `tests/results.csv`, adding file side effects for trainer-level repeated-run audits.
+
+**Milestone 13H Conclusion**:
+- Determinism confidence improved for the strongest currently controllable path.
+- This does **not** prove exhaustive full-pipeline determinism for all runtime paths.
+
 ---
 
 ## Summary
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–13G Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, and integration-level validation coverage expansion are complete ✅
+  - **Milestone 2–13H Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, and end-to-end determinism audit are complete ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -1198,10 +1251,11 @@ cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
     - Milestone 13E: Same-seed reproducibility verification completed (`reproducibility_test`)
     - Milestone 13F: Broader deterministic LSTM finite-difference gradient coverage completed (`lstm_gradient_test` expanded to 3 cases)
     - Milestone 13G: Integration-level deterministic validation path coverage completed (`integration_validation_test`)
-  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, and `integration_validation_test`
+    - Milestone 13H: End-to-end determinism audit completed for current supported scope (`end_to_end_determinism_test`)
+  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, and `end_to_end_determinism_test`
 - LSTM backward/BPTT now has broader deterministic numerical verification across multiple configurations; coverage is improved but not exhaustive
 - Integration-level validation coverage is improved for one deterministic cross-component path, but still not exhaustive
-- Seed option is implemented and was accepted during the smoke test, but full reproducibility still requires repeated-run comparison
+- Determinism coverage now includes controlled repeated-run path checks, but full executable-level determinism remains unverified
 
 **Main Risks**: 
 - LSTM gradient verification is broader than before but still not exhaustive, plus residual validation leakage risk (reduced by Milestone 12 but not exhaustively eliminated)
@@ -1226,6 +1280,7 @@ cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
 15. ✅ Reproducibility test for same seed (Milestone 13E component-level scope) – **COMPLETE (June 26, 2026)**
 16. ✅ Broader LSTM gradient coverage across additional shapes/sequences/loss setups (Milestone 13F) – **COMPLETE (July 4, 2026)**
 17. ✅ Expand end-to-end validation/integration coverage for time-series integrity and training-path behavior (Milestone 13G) – **COMPLETE (July 4, 2026)**
-18. Full end-to-end determinism audit for the numerical pipeline (same-seed repeated-run scope and verification) – **Next step**
+18. ✅ Full end-to-end determinism audit for the numerical pipeline (Milestone 13H current supported scope) – **COMPLETE (July 4, 2026)**
+19. Generated output path hygiene and Trainer result-file behavior audit (`tests/results.csv` side effects and tracking hygiene) – **Next step**
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.

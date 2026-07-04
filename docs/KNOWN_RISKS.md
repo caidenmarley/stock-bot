@@ -11,8 +11,8 @@
 
 - LSTM gradient verification now includes multiple deterministic finite-difference configurations, but is still not exhaustive.
 - Gradient clipping policy is component-wise (LSTM vector and Dense parameters clipped separately), not one combined whole-model norm.
-- Reproducibility is only partially verified: LSTM seed/path determinism is tested, but full end-to-end training determinism is not exhaustively proven.
-- Current seed wiring focuses on LSTM initialization path; not all stochastic paths are explicitly validated under a single same-seed guarantee.
+- Reproducibility is only partially verified: deterministic behavior is covered for a controlled in-memory path, but full executable-level determinism is not exhaustively proven.
+- Current seed wiring focuses on LSTM initialization path; Dense initialization has no production seed API and trainer shuffle ordering is not wired to CLI seed control.
 
 ## Metrics and Evaluation Risks
 

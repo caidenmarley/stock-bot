@@ -13,6 +13,7 @@ The following areas have dedicated coverage from milestones 4-13:
 - Time-series validation checks (`time_series_validation_test`)
 - Integration-level deterministic validation path checks (`integration_validation_test`)
 - Reproducibility checks for currently supported seed/path guarantees (`reproducibility_test`)
+- End-to-end determinism audit checks for currently controllable pipeline path (`end_to_end_determinism_test`)
 
 Coverage improves confidence for inspected paths and tested cases, but does not prove complete correctness.
 
@@ -88,6 +89,27 @@ What this does not prove yet:
 - Determinism of all randomness across the entire training stack.
 
 In particular, current seeding in `main.cpp` is wired to LSTM initialization, while other components (such as Dense initialization path) are not explicitly tied to the same seed path in the current implementation.
+
+## End-to-End Determinism Audit (Milestone 13H)
+
+Milestone 13H adds a deterministic audit test for the strongest currently controllable in-memory numerical path:
+
+- Same-seed repeated runs over synthetic chronological train/validation data
+- Rolling scaling and `StockData` construction for train and validation paths
+- Deterministic `nextBatchShuffled` behavior under fixed explicit order
+- LSTM initialization controlled by `LSTMCell::setGlobalInitSeed(...)`
+- Dense weights/bias explicitly overridden to deterministic values in test scope
+- One tiny deterministic training-style update (Huber backward + Dense backward + LSTM backward + AdaBelief/SGD update)
+- Equality checks before and after update (predictions, losses, and updated parameters)
+
+Audit result for covered path: passed.
+
+Important boundary conditions:
+
+- This does not prove full executable-level determinism for `stock_bot`.
+- Dense does not currently expose a production seed API, so deterministic Dense initialization is test-controlled by explicit parameter override.
+- `Trainer::run` uses an internal static thread-local shuffle RNG seeded to a fixed value and not wired to CLI seed, limiting externally controlled same-seed reproducibility claims for training-order behavior.
+- Trainer writes `tests/results.csv`, so trainer-level repeated-run checks include file side effects unless isolated.
 
 ## Confidence Statement
 

@@ -39,6 +39,7 @@ cmake --build . --target lstm_parameter_order_test
 cmake --build . --target lstm_gradient_test
 cmake --build . --target time_series_validation_test
 cmake --build . --target integration_validation_test
+cmake --build . --target end_to_end_determinism_test
 ```
 
 Build and run all registered tests in one command:
@@ -65,6 +66,7 @@ cd /home/caidenmarley/stock-bot
 ./build/lstm_gradient_test
 ./build/time_series_validation_test
 ./build/integration_validation_test
+./build/end_to_end_determinism_test
 ```
 
 Run the full suite through CTest (recommended):

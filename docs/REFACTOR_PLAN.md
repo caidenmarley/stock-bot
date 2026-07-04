@@ -154,4 +154,5 @@ Reason:
 - Reproducibility baseline checks are now in place for supported guarantees.
 - Broader deterministic LSTM gradient coverage is now in place.
 - Integration-level validation coverage is now broader for a deterministic cross-component path.
-- Next likely low-risk follow-up: full end-to-end determinism audit for the numerical pipeline (same seed, repeated run equivalence scope definition and verification).
+- Full end-to-end determinism audit is now completed in Milestone 13H (`tests/end_to_end_determinism_test.cpp`).
+- Next likely low-risk follow-up: generated output path hygiene and Trainer result-file behavior audit (`tests/results.csv` side effects and tracking hygiene).
