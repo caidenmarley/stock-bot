@@ -147,7 +147,11 @@ Each task should be executed in a small, reviewable, separate commit/branch with
 Recommended first follow-up task after planning:
 - Expand end-to-end validation/integration coverage for time-series integrity and training-path correctness.
 
+Status update:
+- Completed in Milestone 13G by adding `tests/integration_validation_test.cpp` and wiring it into CTest/run_tests.
+
 Reason:
 - Reproducibility baseline checks are now in place for supported guarantees.
 - Broader deterministic LSTM gradient coverage is now in place.
-- The next likely high-value correctness step is deeper integration-level validation coverage while keeping changes test-first.
+- Integration-level validation coverage is now broader for a deterministic cross-component path.
+- Next likely low-risk follow-up: full end-to-end determinism audit for the numerical pipeline (same seed, repeated run equivalence scope definition and verification).

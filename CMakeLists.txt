@@ -44,6 +44,8 @@ add_executable(lstm_gradient_test tests/lstm_gradient_test.cpp ${SRC_FILES})
 add_executable(time_series_validation_test tests/time_series_validation_test.cpp ${SRC_FILES})
 # create reproducibility_test exe, cmake --build build --target reproducibility_test
 add_executable(reproducibility_test tests/reproducibility_test.cpp ${SRC_FILES})
+# create integration_validation_test exe, cmake --build build --target integration_validation_test
+add_executable(integration_validation_test tests/integration_validation_test.cpp ${SRC_FILES})
 
 add_test(NAME testbed COMMAND testbed)
 add_test(NAME parser_test COMMAND parser_test)
@@ -55,6 +57,7 @@ add_test(NAME lstm_parameter_order_test COMMAND lstm_parameter_order_test)
 add_test(NAME lstm_gradient_test COMMAND lstm_gradient_test)
 add_test(NAME time_series_validation_test COMMAND time_series_validation_test)
 add_test(NAME reproducibility_test COMMAND reproducibility_test)
+add_test(NAME integration_validation_test COMMAND integration_validation_test)
 
 add_custom_target(run_tests
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
@@ -69,4 +72,5 @@ add_custom_target(run_tests
         lstm_gradient_test
         time_series_validation_test
         reproducibility_test
+        integration_validation_test
 )

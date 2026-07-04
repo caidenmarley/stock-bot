@@ -1129,13 +1129,57 @@ cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
 - Broader deterministic gradient coverage improves confidence in LSTM backward behavior for covered configurations.
 - This still does **not** prove exhaustive BPTT correctness across all shapes, losses, and training-loop contexts.
 
+### **Milestone 13G: Integration-Level Validation Coverage Expansion** ✅ COMPLETE (July 4, 2026)
+
+**Scope**: Small deterministic, test-first integration coverage across multiple numerical pipeline components without long training or production behavior changes.
+
+**Files Changed**:
+- `tests/integration_validation_test.cpp` (NEW deterministic integration test)
+- `CMakeLists.txt` (added `integration_validation_test` target, CTest registration, and `run_tests` dependency)
+- `docs/BUILD.md` (added build/run references for `integration_validation_test`)
+- `docs/ML_CORRECTNESS.md` (added integration-validation coverage summary)
+- `docs/KNOWN_RISKS.md` (slight risk wording reduction with non-exhaustive caveat preserved)
+- `docs/REFACTOR_PLAN.md` (marked integration-level validation coverage expansion complete and moved next likely follow-up)
+- `PROJECT_STATE.md` (this milestone note)
+
+**No production code changed**:
+- No changes to `src/`, `include/`, `main.cpp`, or model/input/search implementations.
+
+**Deterministic integration path covered**:
+1. Construct synthetic chronological OHLCV-style `PriceData` rows fully in memory.
+2. Split into train and validation by time and assert validation rows occur strictly after training rows.
+3. Build train `StockData` with rolling scaling.
+4. Preload validation scalers from training-tail context only.
+5. Build validation `StockData` sequentially and assert early validation window scaling is unchanged when only later validation rows are perturbed.
+6. Assert non-empty train/validation windows and expected input tensor dimensions.
+7. Run deterministic LSTM + Dense forward pass on a validation batch and assert prediction/target shape compatibility.
+8. Compute Huber loss and assert finiteness.
+9. Repeat deterministic forward path and assert identical outputs after reset.
+
+**Commands Used**:
+```bash
+cd /home/caidenmarley/stock-bot && cmake --build build --target integration_validation_test
+cd /home/caidenmarley/stock-bot && ./build/integration_validation_test
+cd /home/caidenmarley/stock-bot && cmake --build build --target run_tests
+cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
+```
+
+**Results**:
+- `./build/integration_validation_test`: ✅ **1/1 PASSED**
+- `cmake --build build --target run_tests`: ✅ built and executed registered tests successfully
+- `ctest --test-dir build --output-on-failure`: ✅ **11/11 tests passed**
+
+**Milestone 13G Conclusion**:
+- Integration confidence improved for a deterministic cross-component validation path.
+- This does **not** prove exhaustive validation integrity, exhaustive training-path correctness, full end-to-end determinism, or profitability.
+
 ---
 
 ## Summary
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–13F Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, and broader deterministic LSTM gradient coverage are complete ✅
+  - **Milestone 2–13G Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, and integration-level validation coverage expansion are complete ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -1153,8 +1197,10 @@ cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
     - Milestone 13D: Documentation cleanup completed
     - Milestone 13E: Same-seed reproducibility verification completed (`reproducibility_test`)
     - Milestone 13F: Broader deterministic LSTM finite-difference gradient coverage completed (`lstm_gradient_test` expanded to 3 cases)
-  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, and `reproducibility_test`
+    - Milestone 13G: Integration-level deterministic validation path coverage completed (`integration_validation_test`)
+  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, and `integration_validation_test`
 - LSTM backward/BPTT now has broader deterministic numerical verification across multiple configurations; coverage is improved but not exhaustive
+- Integration-level validation coverage is improved for one deterministic cross-component path, but still not exhaustive
 - Seed option is implemented and was accepted during the smoke test, but full reproducibility still requires repeated-run comparison
 
 **Main Risks**: 
@@ -1179,6 +1225,7 @@ cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
 14. Generated-file hygiene for `tests/results.csv` (index/untracking cleanup) – **COMPLETE**
 15. ✅ Reproducibility test for same seed (Milestone 13E component-level scope) – **COMPLETE (June 26, 2026)**
 16. ✅ Broader LSTM gradient coverage across additional shapes/sequences/loss setups (Milestone 13F) – **COMPLETE (July 4, 2026)**
-17. Expand end-to-end validation/integration coverage for time-series integrity and training-path behavior – **Next step**
+17. ✅ Expand end-to-end validation/integration coverage for time-series integrity and training-path behavior (Milestone 13G) – **COMPLETE (July 4, 2026)**
+18. Full end-to-end determinism audit for the numerical pipeline (same-seed repeated-run scope and verification) – **Next step**
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.

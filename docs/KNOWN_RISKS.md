@@ -2,7 +2,7 @@
 
 ## Time-Series and Validation Risks
 
-- Time-series leakage risk is reduced by Milestone 12 checks, but not exhaustively eliminated.
+- Time-series leakage risk is reduced by Milestone 12 checks plus Milestone 13G integration-path checks, but not exhaustively eliminated.
 - Current-day scaling remains a modelling assumption for next-day prediction.
 - Validation fold ranges are nested/overlapping by design; aggregate interpretation should account for fold dependence.
 - End-to-end validation integrity across all scenarios is not exhaustively proven.

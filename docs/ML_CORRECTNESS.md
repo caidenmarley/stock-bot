@@ -11,6 +11,7 @@ The following areas have dedicated coverage from milestones 4-13:
 - LSTM parameter ordering/vector consistency (`lstm_parameter_order_test`)
 - LSTM multi-case deterministic BPTT finite-difference gradient checks (`lstm_gradient_test`)
 - Time-series validation checks (`time_series_validation_test`)
+- Integration-level deterministic validation path checks (`integration_validation_test`)
 - Reproducibility checks for currently supported seed/path guarantees (`reproducibility_test`)
 
 Coverage improves confidence for inspected paths and tested cases, but does not prove complete correctness.
@@ -60,6 +61,20 @@ Coverage is broader than a single tiny case, but still not exhaustive across all
 - Validation scaler past-context preload assumption: validation scaler is preloaded from training tail to provide context before validation-day processing.
 
 Both assumptions are intentional in current design and should remain explicit in documentation.
+
+## Integration Validation Coverage (Milestone 13G)
+
+Milestone 13G adds a small deterministic integration test that exercises a cross-component path without long training:
+
+- Synthetic chronological OHLCV-like data split into time-ordered train and validation segments
+- Validation scaler preloaded only from past training tail context
+- Validation rows processed sequentially in `StockData`
+- Leakage-style guard where future validation rows are perturbed and early validation-window scaled features are verified unchanged
+- Deterministic LSTM + Dense forward pass on validation batch windows
+- Huber loss computation on predicted values versus `StockData` targets
+- Deterministic replay check (same parameters + reset path + same inputs -> same outputs)
+
+This increases integration confidence for the covered path, but does not prove full end-to-end correctness of all training/validation scenarios.
 
 ## Reproducibility Verification (Current Scope)
 
