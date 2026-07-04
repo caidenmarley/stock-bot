@@ -9,7 +9,7 @@
 
 ## ML Correctness Risks
 
-- LSTM gradient verification is currently limited-scope (tiny deterministic case plus related checks), not exhaustive.
+- LSTM gradient verification now includes multiple deterministic finite-difference configurations, but is still not exhaustive.
 - Gradient clipping policy is component-wise (LSTM vector and Dense parameters clipped separately), not one combined whole-model norm.
 - Reproducibility is only partially verified: LSTM seed/path determinism is tested, but full end-to-end training determinism is not exhaustively proven.
 - Current seed wiring focuses on LSTM initialization path; not all stochastic paths are explicitly validated under a single same-seed guarantee.

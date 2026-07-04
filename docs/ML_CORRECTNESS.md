@@ -9,7 +9,7 @@ The following areas have dedicated coverage from milestones 4-13:
 - Huber loss and metrics formulas (`loss_metrics_test`)
 - Dense gradients via finite differences (`dense_gradient_test`)
 - LSTM parameter ordering/vector consistency (`lstm_parameter_order_test`)
-- LSTM tiny-case BPTT finite-difference gradient check (`lstm_gradient_test`)
+- LSTM multi-case deterministic BPTT finite-difference gradient checks (`lstm_gradient_test`)
 - Time-series validation checks (`time_series_validation_test`)
 - Reproducibility checks for currently supported seed/path guarantees (`reproducibility_test`)
 
@@ -35,17 +35,24 @@ Milestone 8 added deterministic finite-difference checks for Dense:
 
 Result for covered case: passed.
 
-## LSTM Tiny-Case Gradient Check Summary
+## LSTM Gradient Check Summary (Broadened Deterministic Coverage)
 
-Milestone 10 added a deterministic tiny-shape LSTM BPTT finite-difference check:
-- Small fixed shape and deterministic parameter vector
-- Analytical gradient from reverse-time `backwardPass`
-- Numerical central differences
-- Tight absolute/relative error agreement in the tested case
+Milestone 10 introduced the initial tiny deterministic LSTM BPTT finite-difference check.
+Milestone 13F expanded this into multiple deterministic configurations while keeping central finite differences and full-vector comparisons:
 
-Result for covered case: passed.
+- Case A (original tiny case): `inputSize=2`, `hiddenSize=4`, `sequenceLength=3`, hidden-state loss
+- Case B (short sequence): `inputSize=3`, `hiddenSize=2`, `sequenceLength=1`, hidden-state loss
+- Case C (longer sequence + cell term): `inputSize=1`, `hiddenSize=3`, `sequenceLength=5`, hidden-state loss plus weighted final-cell loss
 
-This is still limited-scope coverage and not exhaustive across shapes, sequence lengths, or loss setups.
+For each case:
+- Analytical gradient is computed from reverse-time `backwardPass`
+- Numerical gradient uses central finite differences over all parameters
+- Comparison checks the full gradient vector (not a single-index subset)
+- Tolerances remain conservative and unchanged: `epsilon=1e-5`, `absTol=1e-4`, `relTol=1e-3`
+
+Result for covered cases: passed.
+
+Coverage is broader than a single tiny case, but still not exhaustive across all shapes, sequence lengths, objectives, and training-loop contexts.
 
 ## Time-Series Assumptions to Keep Documented
 

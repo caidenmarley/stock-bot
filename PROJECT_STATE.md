@@ -1086,13 +1086,56 @@ ctest --test-dir build --output-on-failure
 - Full end-to-end `stock_bot` determinism across runs is not exhaustively proven.
 - Not all stochastic paths are validated under one unified same-seed guarantee in current implementation.
 
+### **Milestone 13F: Broader LSTM Gradient Coverage** ✅ COMPLETE (July 4, 2026)
+
+**Scope**: Test-only correctness-confidence expansion for LSTM BPTT finite-difference checks. No production behavior changes.
+
+**Files Changed**:
+- `tests/lstm_gradient_test.cpp` (expanded existing gradient test from one deterministic case to three deterministic full-vector finite-difference cases)
+- `docs/ML_CORRECTNESS.md` (updated LSTM gradient coverage summary)
+- `docs/KNOWN_RISKS.md` (adjusted LSTM gradient risk wording)
+- `docs/REFACTOR_PLAN.md` (marked broader LSTM gradient coverage task complete; updated next follow-up)
+- `PROJECT_STATE.md` (this milestone note)
+
+**No production code changed**:
+- No changes to `src/`, `include/`, `main.cpp`, or model/input/search implementations.
+
+**Gradient cases now covered in `lstm_gradient_test`**:
+1. Existing tiny base case: `inputSize=2`, `hiddenSize=4`, `sequenceLength=3`, final hidden-state loss only.
+2. Additional short-sequence case: `inputSize=3`, `hiddenSize=2`, `sequenceLength=1`, final hidden-state loss only.
+3. Additional longer-sequence case: `inputSize=1`, `hiddenSize=3`, `sequenceLength=5`, final hidden-state loss plus weighted final-cell loss (non-zero final `deltaC` path).
+
+**Numerical method and tolerances**:
+- Central finite differences with `epsilon=1e-5`.
+- Full-vector comparison (all parameters in each case).
+- Tolerances unchanged and conservative: absolute `1e-4`, relative `1e-3`.
+
+**Commands Used**:
+```bash
+cd /home/caidenmarley/stock-bot && cmake --build build --target lstm_gradient_test
+cd /home/caidenmarley/stock-bot && ./build/lstm_gradient_test
+cd /home/caidenmarley/stock-bot && cmake --build build --target run_tests
+cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
+```
+
+**Results**:
+- `./build/lstm_gradient_test`: ✅ **3/3 PASSED**
+  - Case 1 worst: max abs `2.70113e-12`, max rel `2.70113e-12`, worst index `83`.
+  - Case 2 worst: max abs `4.52065e-13`, max rel `4.52065e-13`, worst index `34`.
+  - Case 3 worst: max abs `4.67853e-13`, max rel `4.67853e-13`, worst index `44`.
+- `ctest --test-dir build --output-on-failure`: ✅ **10/10 tests passed**.
+
+**Milestone 13F Conclusion**:
+- Broader deterministic gradient coverage improves confidence in LSTM backward behavior for covered configurations.
+- This still does **not** prove exhaustive BPTT correctness across all shapes, losses, and training-loop contexts.
+
 ---
 
 ## Summary
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–13E Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, and reproducibility verification are complete ✅
+  - **Milestone 2–13F Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, and broader deterministic LSTM gradient coverage are complete ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -1109,12 +1152,13 @@ ctest --test-dir build --output-on-failure
     - Milestone 13C: CTest full-suite runner completed (single-command `ctest --output-on-failure` workflow)
     - Milestone 13D: Documentation cleanup completed
     - Milestone 13E: Same-seed reproducibility verification completed (`reproducibility_test`)
+    - Milestone 13F: Broader deterministic LSTM finite-difference gradient coverage completed (`lstm_gradient_test` expanded to 3 cases)
   - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, and `reproducibility_test`
-- LSTM backward/BPTT now has tiny-case numerical verification; broader-case verification is still pending
+- LSTM backward/BPTT now has broader deterministic numerical verification across multiple configurations; coverage is improved but not exhaustive
 - Seed option is implemented and was accepted during the smoke test, but full reproducibility still requires repeated-run comparison
 
 **Main Risks**: 
-- Limited-scope LSTM gradient verification (only tiny deterministic case) and residual validation leakage risk (reduced by Milestone 12 but not exhaustively eliminated)
+- LSTM gradient verification is broader than before but still not exhaustive, plus residual validation leakage risk (reduced by Milestone 12 but not exhaustively eliminated)
 - Low coverage for end-to-end validation integrity
 - Trading metrics are unvalidated and should not be interpreted as profit signals
 
@@ -1134,6 +1178,7 @@ ctest --test-dir build --output-on-failure
 13. ✅ CTest full-suite runner (Milestone 13C) – **COMPLETE (June 26, 2026)**
 14. Generated-file hygiene for `tests/results.csv` (index/untracking cleanup) – **COMPLETE**
 15. ✅ Reproducibility test for same seed (Milestone 13E component-level scope) – **COMPLETE (June 26, 2026)**
-16. Broader LSTM gradient coverage across additional shapes/sequences/loss setups – **Next step**
+16. ✅ Broader LSTM gradient coverage across additional shapes/sequences/loss setups (Milestone 13F) – **COMPLETE (July 4, 2026)**
+17. Expand end-to-end validation/integration coverage for time-series integrity and training-path behavior – **Next step**
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.

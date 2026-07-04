@@ -99,6 +99,7 @@ Each task should be executed in a small, reviewable, separate commit/branch with
 - Production code changes expected: Not for planning/docs; Yes only for later behavior change.
 
 ### Task: Add broader LSTM gradient coverage cases
+- Status: Completed in Milestone 13F (`tests/lstm_gradient_test.cpp` expanded to multiple deterministic full-vector finite-difference cases).
 - Motivation: Current tiny-case check is useful but limited; broader shapes/sequences reduce residual correctness risk.
 - Files likely touched: new/expanded tests under `tests/` (future milestone).
 - Risk level: Medium.
@@ -144,8 +145,9 @@ Each task should be executed in a small, reviewable, separate commit/branch with
 ## 4. Recommended Next Actual Code Change
 
 Recommended first follow-up task after planning:
-- Broader LSTM gradient coverage across additional shapes/sequences/loss setups.
+- Expand end-to-end validation/integration coverage for time-series integrity and training-path correctness.
 
 Reason:
 - Reproducibility baseline checks are now in place for supported guarantees.
-- Expanding LSTM gradient coverage is the next likely high-value correctness step while keeping changes test-first.
+- Broader deterministic LSTM gradient coverage is now in place.
+- The next likely high-value correctness step is deeper integration-level validation coverage while keeping changes test-first.
