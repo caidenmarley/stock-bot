@@ -41,6 +41,7 @@ cmake --build . --target time_series_validation_test
 cmake --build . --target integration_validation_test
 cmake --build . --target end_to_end_determinism_test
 cmake --build . --target results_file_hygiene_test
+cmake --build . --target adabelief_test
 ```
 
 Build and run all registered tests in one command:
@@ -69,6 +70,7 @@ cd /home/caidenmarley/stock-bot
 ./build/integration_validation_test
 ./build/end_to_end_determinism_test
 ./build/results_file_hygiene_test
+./build/adabelief_test
 ```
 
 Run the full suite through CTest (recommended):

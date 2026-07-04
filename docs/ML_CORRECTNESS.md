@@ -14,6 +14,7 @@ The following areas have dedicated coverage from milestones 4-13:
 - Integration-level deterministic validation path checks (`integration_validation_test`)
 - Reproducibility checks for currently supported seed/path guarantees (`reproducibility_test`)
 - End-to-end determinism audit checks for currently controllable pipeline path (`end_to_end_determinism_test`)
+- Focused AdaBelief optimizer behavior checks (`adabelief_test`)
 
 Coverage improves confidence for inspected paths and tested cases, but does not prove complete correctness.
 
@@ -110,6 +111,23 @@ Important boundary conditions:
 - Dense does not currently expose a production seed API, so deterministic Dense initialization is test-controlled by explicit parameter override.
 - `Trainer::run` uses an internal static thread-local shuffle RNG seeded to a fixed value and not wired to CLI seed, limiting externally controlled same-seed reproducibility claims for training-order behavior.
 - Trainer writes `tests/results.csv`, so trainer-level repeated-run checks include file side effects unless isolated.
+
+## AdaBelief Coverage (Milestone 13J)
+
+Milestone 13J adds focused deterministic tests for the currently implemented `AdaBelief::update` behavior:
+
+- Zero-gradient update leaves parameters unchanged.
+- One-step update matches hand-computed values from the implementation formula (including bias correction and epsilon placement).
+- Opposite gradient signs move parameters in opposite directions.
+- Two-step constant-gradient update matches a closed-form derivation consistent with the current implementation.
+
+Implementation-specific notes verified by tests:
+
+- Bias correction is applied to both first and second moments.
+- Second moment tracks belief residual `(g - m)^2`, not plain `g^2`.
+- Epsilon is added in the denominator after square root.
+
+Coverage is still limited to small deterministic vectors and does not prove optimizer correctness for all dimensionalities, all hyperparameter settings, or full training-loop interactions.
 
 ## Confidence Statement
 

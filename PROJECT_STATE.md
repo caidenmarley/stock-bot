@@ -1280,13 +1280,57 @@ cd /home/caidenmarley/stock-bot && git status --short
 - Generated trainer results output is now explicit, controllable, and safer for tests/audits.
 - Hyperparameter-search results remain a separate output path concern (`data/results.csv`) and should be treated as generated artifact output.
 
+### **Milestone 13J: Focused AdaBelief Optimizer Coverage** ✅ COMPLETE (July 4, 2026)
+
+**Scope**: Test/audit-first coverage of currently implemented `AdaBelief::update` behavior, without changing optimizer or model behavior.
+
+**Files Changed**:
+- `tests/adabelief_test.cpp` (NEW focused deterministic AdaBelief tests)
+- `CMakeLists.txt` (added `adabelief_test` target, CTest registration, and `run_tests` dependency)
+- `docs/BUILD.md` (added build/run references for `adabelief_test`)
+- `docs/ML_CORRECTNESS.md` (added focused AdaBelief coverage section)
+- `docs/KNOWN_RISKS.md` (updated optimizer-risk wording)
+- `docs/REFACTOR_PLAN.md` (marked optimizer coverage follow-up complete and updated next likely follow-up)
+- `PROJECT_STATE.md` (this milestone note)
+
+**No production optimizer/model code changed**:
+- No changes to `src/model/ada_belief.cpp`, LSTM/Dense/loss/metrics implementations, or trainer/main behavior.
+
+**AdaBelief behaviors covered**:
+1. Zero gradient update leaves parameters unchanged.
+2. One-step deterministic update matches hand-computed implementation formula.
+3. Opposite gradient signs move parameters in opposite directions.
+4. Two-step constant-gradient update matches closed-form behavior derived from the current implementation.
+
+**Implementation details explicitly validated in test expectations**:
+- Bias correction for both first and second moments.
+- Belief residual second moment uses `(g - m)^2`.
+- Epsilon applied in denominator after square root.
+
+**Commands Used**:
+```bash
+cd /home/caidenmarley/stock-bot && cmake --build build --target adabelief_test
+cd /home/caidenmarley/stock-bot && ./build/adabelief_test
+cd /home/caidenmarley/stock-bot && cmake --build build --target run_tests
+cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
+cd /home/caidenmarley/stock-bot && git status --short
+```
+
+**Results**:
+- `./build/adabelief_test`: ✅ **4/4 PASSED**
+- `ctest --test-dir build --output-on-failure`: ✅ **14/14 tests passed**
+
+**Milestone 13J Conclusion**:
+- Confidence improved for focused deterministic AdaBelief update mechanics in the currently implemented API.
+- This does **not** prove full optimizer correctness across all hyperparameters, dimensionalities, clipping interactions, or full training-loop regimes.
+
 ---
 
 ## Summary
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–13I Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, end-to-end determinism audit, and results-file hygiene improvements are complete ✅
+  - **Milestone 2–13J Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, end-to-end determinism audit, results-file hygiene improvements, and focused AdaBelief optimizer coverage are complete ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -1307,11 +1351,13 @@ cd /home/caidenmarley/stock-bot && git status --short
     - Milestone 13G: Integration-level deterministic validation path coverage completed (`integration_validation_test`)
     - Milestone 13H: End-to-end determinism audit completed for current supported scope (`end_to_end_determinism_test`)
     - Milestone 13I: Results/output-path hygiene completed (`results_file_hygiene_test` + configurable trainer output path)
-  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, `end_to_end_determinism_test`, and `results_file_hygiene_test`
+    - Milestone 13J: Focused AdaBelief optimizer coverage completed (`adabelief_test`)
+  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, `end_to_end_determinism_test`, `results_file_hygiene_test`, and `adabelief_test`
 - LSTM backward/BPTT now has broader deterministic numerical verification across multiple configurations; coverage is improved but not exhaustive
 - Integration-level validation coverage is improved for one deterministic cross-component path, but still not exhaustive
 - Determinism coverage now includes controlled repeated-run path checks, but full executable-level determinism remains unverified
 - Trainer output path side effects are reduced via configurable/disable-able CSV writing, with remaining generated-artifact risk for user-selected paths and hyperparameter search output
+- AdaBelief behavior now has focused deterministic coverage, but optimizer correctness is still not exhaustively proven in full training contexts
 
 **Main Risks**: 
 - LSTM gradient verification is broader than before but still not exhaustive, plus residual validation leakage risk (reduced by Milestone 12 but not exhaustively eliminated)
@@ -1338,6 +1384,7 @@ cd /home/caidenmarley/stock-bot && git status --short
 17. ✅ Expand end-to-end validation/integration coverage for time-series integrity and training-path behavior (Milestone 13G) – **COMPLETE (July 4, 2026)**
 18. ✅ Full end-to-end determinism audit for the numerical pipeline (Milestone 13H current supported scope) – **COMPLETE (July 4, 2026)**
 19. ✅ Generated output path hygiene and Trainer result-file behavior audit (Milestone 13I) – **COMPLETE (July 4, 2026)**
-20. Optimizer-policy clarity audit (Dense SGD-style step vs LSTM AdaBelief policy documentation and coverage) – **Next step**
+20. ✅ Focused AdaBelief optimizer coverage (Milestone 13J) – **COMPLETE (July 4, 2026)**
+21. Trainer-level optimizer-policy interaction coverage (Dense SGD-style step vs LSTM AdaBelief path under controlled tiny training scenarios) – **Next step**
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.

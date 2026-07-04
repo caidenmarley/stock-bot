@@ -10,6 +10,7 @@
 ## ML Correctness Risks
 
 - LSTM gradient verification now includes multiple deterministic finite-difference configurations, but is still not exhaustive.
+- AdaBelief update mechanics are now covered for focused deterministic cases, but optimizer behavior is not exhaustively proven across all settings and training interactions.
 - Gradient clipping policy is component-wise (LSTM vector and Dense parameters clipped separately), not one combined whole-model norm.
 - Reproducibility is only partially verified: deterministic behavior is covered for a controlled in-memory path, but full executable-level determinism is not exhaustively proven.
 - Current seed wiring focuses on LSTM initialization path; Dense initialization has no production seed API and trainer shuffle ordering is not wired to CLI seed control.
