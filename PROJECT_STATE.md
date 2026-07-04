@@ -1226,13 +1226,67 @@ cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
 - Determinism confidence improved for the strongest currently controllable path.
 - This does **not** prove exhaustive full-pipeline determinism for all runtime paths.
 
+### **Milestone 13I: Results-File/Output-Path Hygiene** ✅ COMPLETE (July 4, 2026)
+
+**Scope**: Small hygiene/refactor task to remove hardcoded source-tree result writes and make trainer output explicit/controlled, without changing ML behavior.
+
+**Files Changed**:
+- `include/model/trainer.h` (added optional `resultsFilePath` constructor parameter; empty path disables trainer CSV writing)
+- `src/model/trainer.cpp` (removed hardcoded `tests/results.csv` writer; implemented configurable/disable-able output path)
+- `main.cpp` (removed hardcoded truncation of `tests/results.csv`; added `--results-file` and `--no-results`; default output now `build/results/trainer_results.csv`)
+- `.gitignore` (added generated output ignores: `data/results.csv`, `build/results/`, `build/test_outputs/`)
+- `tests/results_file_hygiene_test.cpp` (NEW test covering disabled output and explicit safe-path output)
+- `CMakeLists.txt` (added `results_file_hygiene_test` target, CTest registration, and `run_tests` dependency)
+- `docs/BUILD.md` (documented trainer output controls and safe output paths)
+- `docs/KNOWN_RISKS.md` (updated artifact-risk wording)
+- `docs/REFACTOR_PLAN.md` (marked hygiene follow-up complete; updated next likely follow-up)
+- `PROJECT_STATE.md` (this milestone note)
+
+**No ML behavior changes**:
+- No changes to LSTM/Dense implementations, optimizer math, loss formulas, scaling logic, validation split behavior, or metrics formulas.
+
+**Result-writing behavior before**:
+- `Trainer::run` always appended metrics to hardcoded `tests/results.csv`.
+- `main.cpp` truncated `tests/results.csv` at startup.
+- This produced source-tree side effects during runs/audits.
+
+**Result-writing behavior after**:
+- `Trainer` output is now explicit and controlled:
+  - empty `resultsFilePath` disables trainer CSV output
+  - non-empty `resultsFilePath` writes/appends there (parent directories auto-created)
+- `main.cpp` defaults to build-local `build/results/trainer_results.csv`
+- CLI options:
+  - `--results-file PATH` to choose output file
+  - `--no-results` to disable trainer CSV output
+- Hyperparameter search behavior remains separate and unchanged: `gridSearch` still writes `data/results.csv`.
+
+**Hygiene test coverage (`results_file_hygiene_test`)**:
+1. Run trainer with output disabled and assert no modification to `tests/results.csv`.
+2. Run trainer with explicit safe path (`build/test_outputs/results_file_hygiene.csv`) and assert file is created there.
+3. Assert source-tree `tests/results.csv` snapshot remains unchanged.
+
+**Commands Used**:
+```bash
+cd /home/caidenmarley/stock-bot && cmake --build build --target run_tests
+cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
+cd /home/caidenmarley/stock-bot && git status --short
+```
+
+**Results**:
+- `ctest --test-dir build --output-on-failure`: ✅ **13/13 tests passed** (including `results_file_hygiene_test`)
+- No source-tree generated results file modifications were introduced by tests in this task.
+
+**Milestone 13I Conclusion**:
+- Generated trainer results output is now explicit, controllable, and safer for tests/audits.
+- Hyperparameter-search results remain a separate output path concern (`data/results.csv`) and should be treated as generated artifact output.
+
 ---
 
 ## Summary
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–13H Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, and end-to-end determinism audit are complete ✅
+  - **Milestone 2–13I Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, end-to-end determinism audit, and results-file hygiene improvements are complete ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -1252,10 +1306,12 @@ cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
     - Milestone 13F: Broader deterministic LSTM finite-difference gradient coverage completed (`lstm_gradient_test` expanded to 3 cases)
     - Milestone 13G: Integration-level deterministic validation path coverage completed (`integration_validation_test`)
     - Milestone 13H: End-to-end determinism audit completed for current supported scope (`end_to_end_determinism_test`)
-  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, and `end_to_end_determinism_test`
+    - Milestone 13I: Results/output-path hygiene completed (`results_file_hygiene_test` + configurable trainer output path)
+  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, `end_to_end_determinism_test`, and `results_file_hygiene_test`
 - LSTM backward/BPTT now has broader deterministic numerical verification across multiple configurations; coverage is improved but not exhaustive
 - Integration-level validation coverage is improved for one deterministic cross-component path, but still not exhaustive
 - Determinism coverage now includes controlled repeated-run path checks, but full executable-level determinism remains unverified
+- Trainer output path side effects are reduced via configurable/disable-able CSV writing, with remaining generated-artifact risk for user-selected paths and hyperparameter search output
 
 **Main Risks**: 
 - LSTM gradient verification is broader than before but still not exhaustive, plus residual validation leakage risk (reduced by Milestone 12 but not exhaustively eliminated)
@@ -1281,6 +1337,7 @@ cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
 16. ✅ Broader LSTM gradient coverage across additional shapes/sequences/loss setups (Milestone 13F) – **COMPLETE (July 4, 2026)**
 17. ✅ Expand end-to-end validation/integration coverage for time-series integrity and training-path behavior (Milestone 13G) – **COMPLETE (July 4, 2026)**
 18. ✅ Full end-to-end determinism audit for the numerical pipeline (Milestone 13H current supported scope) – **COMPLETE (July 4, 2026)**
-19. Generated output path hygiene and Trainer result-file behavior audit (`tests/results.csv` side effects and tracking hygiene) – **Next step**
+19. ✅ Generated output path hygiene and Trainer result-file behavior audit (Milestone 13I) – **COMPLETE (July 4, 2026)**
+20. Optimizer-policy clarity audit (Dense SGD-style step vs LSTM AdaBelief policy documentation and coverage) – **Next step**
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.

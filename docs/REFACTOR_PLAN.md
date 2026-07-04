@@ -155,4 +155,5 @@ Reason:
 - Broader deterministic LSTM gradient coverage is now in place.
 - Integration-level validation coverage is now broader for a deterministic cross-component path.
 - Full end-to-end determinism audit is now completed in Milestone 13H (`tests/end_to_end_determinism_test.cpp`).
-- Next likely low-risk follow-up: generated output path hygiene and Trainer result-file behavior audit (`tests/results.csv` side effects and tracking hygiene).
+- Generated output path hygiene and Trainer result-file behavior audit is now completed in Milestone 13I.
+- Next likely low-risk follow-up: optimizer-policy clarity audit (Dense SGD-style step vs LSTM AdaBelief policy documentation and coverage).

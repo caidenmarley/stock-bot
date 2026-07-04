@@ -40,6 +40,7 @@ cmake --build . --target lstm_gradient_test
 cmake --build . --target time_series_validation_test
 cmake --build . --target integration_validation_test
 cmake --build . --target end_to_end_determinism_test
+cmake --build . --target results_file_hygiene_test
 ```
 
 Build and run all registered tests in one command:
@@ -67,6 +68,7 @@ cd /home/caidenmarley/stock-bot
 ./build/time_series_validation_test
 ./build/integration_validation_test
 ./build/end_to_end_determinism_test
+./build/results_file_hygiene_test
 ```
 
 Run the full suite through CTest (recommended):
@@ -81,10 +83,16 @@ ctest --test-dir build --output-on-failure
 
 ## Generated Results Files
 
-The training flow writes generated output to:
-- `tests/results.csv` (written/appended by trainer flow, truncated in main startup path)
+Trainer-generated metrics output is now explicit and configurable:
+- `Trainer` takes an optional `resultsFilePath`.
+- Empty path disables trainer CSV output.
+- `main.cpp` defaults to `build/results/trainer_results.csv`.
+- `main.cpp` options:
+	- `--results-file PATH` to select an explicit output file
+	- `--no-results` to disable trainer CSV output
 
 There is also hyperparameter-search output logic for:
 - `data/results.csv`
 
 These are generated artifacts and should not usually be committed as source changes.
+Use build-local paths (for example under `build/results/` or `build/test_outputs/`) to avoid dirty source-tree files during tests and audits.

@@ -24,4 +24,9 @@ stock_bot
 
 # Ignore logs
 *.log
+
+# Ignore generated experiment/result outputs
 tests/results.csv
+data/results.csv
+build/results/
+build/test_outputs/

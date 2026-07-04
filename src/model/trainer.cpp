@@ -8,14 +8,17 @@
 #include <utility>
 #include <algorithm>
 #include <random>
+#include <filesystem>
 
 Trainer::Trainer(int numFeatures, int hiddenSize, int sequenceLength, int batchSize, double learningRate, double delta,
 size_t windowSize, double maxNorm, double decayFactor, double minLR, int lrDecayMaxTries,
-const std::vector<PriceData>& rawTrainingData, const std::vector<PriceData>& rawValidationData): 
+const std::vector<PriceData>& rawTrainingData, const std::vector<PriceData>& rawValidationData,
+const std::string& resultsFilePath): 
     lstm(numFeatures, hiddenSize, sequenceLength), outputLayer(hiddenSize), 
     optimiser(lstm.getParameterCount(), learningRate),  huberLoss(delta),
     sequenceLength(sequenceLength), batchSize(batchSize), learningRate(learningRate), windowSize(windowSize), 
     maxNorm(maxNorm), decayFactor(decayFactor), minLR(minLR), lrDecayMaxTries(lrDecayMaxTries),
+    resultsFilePath(resultsFilePath), writeResults(!resultsFilePath.empty()),
     // Training has empty scaler
     trainingData(
         rawTrainingData, 
@@ -242,27 +245,40 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
         std::cout << "[PNL] sharpe: " << std::fixed << std::setprecision(2) << sharpeAndTurnover.sharpeNet 
                   << " | avgTurnover: " <<  std::setprecision(3) << sharpeAndTurnover.avgTurnover << std::endl;
 
-        static bool wroteHeader = false;
-        static std::ofstream csv("tests/results.csv", std::ios::app);
-
-        if (csv && !wroteHeader) {
-            csv << "epoch,train_loss,val_loss,mae,rmse,da,ada_lr,dense_lr\n";
-            wroteHeader = true;
-        }
-
         double adaLR   = optimiser.getLearningRate();
         double denseLR = learningRate;
 
-        if (csv) {
-            csv << epoch << ","
-                << avgTrainingLoss << ","
-                << avgValidationLoss << ","
-                << mae << ","
-                << rmse << ","
-                << da << ","
-                << adaLR << ","
-                << denseLR << "\n";
-            csv.flush();
+        if (writeResults) {
+            const std::filesystem::path outputPath(resultsFilePath);
+
+            if (outputPath.has_parent_path()) {
+                std::error_code mkErr;
+                std::filesystem::create_directories(outputPath.parent_path(), mkErr);
+            }
+
+            std::error_code existsErr;
+            const bool exists = std::filesystem::exists(outputPath, existsErr);
+            bool writeHeader = !exists;
+            if (exists && !existsErr) {
+                std::error_code sizeErr;
+                writeHeader = (std::filesystem::file_size(outputPath, sizeErr) == 0);
+            }
+
+            std::ofstream csv(resultsFilePath, std::ios::app);
+            if (csv) {
+                if (writeHeader) {
+                    csv << "epoch,train_loss,val_loss,mae,rmse,da,ada_lr,dense_lr\n";
+                }
+                csv << epoch << ","
+                    << avgTrainingLoss << ","
+                    << avgValidationLoss << ","
+                    << mae << ","
+                    << rmse << ","
+                    << da << ","
+                    << adaLR << ","
+                    << denseLR << "\n";
+                csv.flush();
+            }
         }
     }
 

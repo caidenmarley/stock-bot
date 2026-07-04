@@ -9,7 +9,6 @@
 #include <iostream>
 #include <vector>
 #include <iomanip>
-#include <fstream>
 
 static TrainingResult runFold(
     const std::vector<PriceData>& rawData,
@@ -27,7 +26,8 @@ static TrainingResult runFold(
     int lrDecayMaxTries,
     int epochs,
     double stoppingToleranceLoss,
-    int maxEpochsWithNoImprovement
+    int maxEpochsWithNoImprovement,
+    const std::string& trainerResultsPath
 ){
     std::vector<PriceData> trainingData(rawData.begin(), rawData.begin() + splitStart);
     std::vector<PriceData> validationData(rawData.begin() + splitStart, rawData.end());
@@ -35,7 +35,8 @@ static TrainingResult runFold(
     Trainer trainer(
         numFeatures, hiddenSize, sequenceLength, batchSize, learningRate, delta,
         windowSize, maxNorm, decayFactor, minLR, lrDecayMaxTries, 
-        trainingData, validationData
+        trainingData, validationData,
+        trainerResultsPath
     );
 
     return trainer.run(epochs, stoppingToleranceLoss, maxEpochsWithNoImprovement);
@@ -43,10 +44,6 @@ static TrainingResult runFold(
 
 int main(int argc, char* argv[]) {
     try {
-        // clear results csv
-        std::ofstream ofs;
-        ofs.open("tests/results.csv", std::ofstream::out | std::ofstream::trunc);
-        ofs.close();
         //bool test = false;
 
         // TrainerParams trainerParams;
@@ -71,6 +68,9 @@ int main(int argc, char* argv[]) {
         int seed = 0;
         bool givenSeed = false;
 
+        bool enableTrainerResults = true;
+        std::string trainerResultsPath = "build/results/trainer_results.csv";
+
         // ---Arg Parsing---
         for(int i = 1; i < argc; ++i) {
             std::string arg = argv[i];
@@ -85,6 +85,11 @@ int main(int argc, char* argv[]) {
             }else if(arg == "--seed"){
                 seed = std::stoi(argv[++i]);
                 givenSeed = true;
+            }else if(arg == "--results-file" && i+1 < argc) {
+                trainerResultsPath = argv[++i];
+                enableTrainerResults = true;
+            }else if(arg == "--no-results") {
+                enableTrainerResults = false;
             }else if(arg == "--help") {
                 std::cout
                   << "Usage: " << argv[0] << " [options]\n"
@@ -93,6 +98,8 @@ int main(int argc, char* argv[]) {
                   << "  --early-stop-eps X             Early-stop tol. (default 1e-3)\n"
                   << "  --early-stop-patience P        Early-stop patience (default 3)\n"
                   << "  --seed S                       Set RNG seed \n"
+                  << "  --results-file PATH            Write trainer metrics CSV to PATH\n"
+                  << "  --no-results                   Disable trainer CSV output\n"
                   << "  --test                         Run hyperparameter search\n";
                 return 0;
             }
@@ -101,6 +108,8 @@ int main(int argc, char* argv[]) {
         if(givenSeed){
             LSTMCell::setGlobalInitSeed(seed);
         }
+
+        const std::string activeTrainerResultsPath = enableTrainerResults ? trainerResultsPath : "";
 
         // ---Load Data From CSV--
         const std::string csvPath = "data/AAAU.csv";
@@ -131,7 +140,8 @@ int main(int argc, char* argv[]) {
                 rawData, splitStart, numFeatures, hiddenSize,
                 sequenceLength, batchSize, learningRate, delta,
                 windowSize, maxNorm, decayFactor, minLR, lrDecayMaxTries,
-                epochs, stoppingToleranceLoss, maxEpochsWithNoImprovement
+                epochs, stoppingToleranceLoss, maxEpochsWithNoImprovement,
+                activeTrainerResultsPath
             );
 
             foldResults.push_back(result);
