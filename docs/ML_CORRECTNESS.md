@@ -15,6 +15,7 @@ The following areas have dedicated coverage from milestones 4-13:
 - Reproducibility checks for currently supported seed/path guarantees (`reproducibility_test`)
 - End-to-end determinism audit checks for currently controllable pipeline path (`end_to_end_determinism_test`)
 - Focused AdaBelief optimizer behavior checks (`adabelief_test`)
+- Focused Trainer-level behavior checks for tiny deterministic coordination path (`trainer_behavior_test`)
 
 Coverage improves confidence for inspected paths and tested cases, but does not prove complete correctness.
 
@@ -128,6 +129,23 @@ Implementation-specific notes verified by tests:
 - Epsilon is added in the denominator after square root.
 
 Coverage is still limited to small deterministic vectors and does not prove optimizer correctness for all dimensionalities, all hyperparameter settings, or full training-loop interactions.
+
+## Trainer-Level Behavior Coverage (Milestone 13K)
+
+Milestone 13K adds a focused deterministic Trainer-level smoke/behavior test without changing Trainer math or model implementations:
+
+- Tiny 1-epoch Trainer run using synthetic in-memory chronological OHLCV-like data only.
+- Existing production path exercised through `Trainer` construction and `Trainer::run(...)` with LSTM, Dense, Huber, AdaBelief, and StockData components.
+- Returned `TrainingResult` is validated for finite/non-sentinel best validation loss and epoch bounds.
+- Output disabled path is validated (empty `resultsFilePath`).
+- Output redirect path is validated to build-local `build/test_outputs/trainer_behavior_results.csv`.
+- Source-tree artifact guard verifies no modification to `tests/results.csv` or `data/results.csv`.
+
+Coverage boundary for this milestone:
+
+- This is black-box Trainer behavior coverage; it does not introspect private model parameters from `Trainer`.
+- It does not prove validation-loss improvement trends, long-run convergence, or profitability.
+- It does not prove full trainer determinism under all runtime/process conditions.
 
 ## Confidence Statement
 

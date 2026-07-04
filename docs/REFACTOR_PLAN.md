@@ -157,4 +157,5 @@ Reason:
 - Full end-to-end determinism audit is now completed in Milestone 13H (`tests/end_to_end_determinism_test.cpp`).
 - Generated output path hygiene and Trainer result-file behavior audit is now completed in Milestone 13I.
 - Focused AdaBelief optimizer coverage is now completed in Milestone 13J (`tests/adabelief_test.cpp`).
-- Next likely low-risk follow-up: Trainer-level behavior coverage for optimizer-policy interaction (Dense SGD-style step vs LSTM AdaBelief path under controlled tiny training scenarios).
+- Trainer-level behavior coverage for a controlled tiny run is now completed in Milestone 13K (`tests/trainer_behavior_test.cpp`).
+- Next likely low-risk follow-up: CLI-level smoke coverage for result-output flags (`--results-file` / `--no-results`) to strengthen executable-path safety checks without changing ML math.

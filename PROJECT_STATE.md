@@ -1324,13 +1324,59 @@ cd /home/caidenmarley/stock-bot && git status --short
 - Confidence improved for focused deterministic AdaBelief update mechanics in the currently implemented API.
 - This does **not** prove full optimizer correctness across all hyperparameters, dimensionalities, clipping interactions, or full training-loop regimes.
 
+### **Milestone 13K: Focused Trainer-Level Behavior Coverage** ✅ COMPLETE (July 4, 2026)
+
+**Scope**: Add small deterministic Trainer-level black-box behavior coverage to verify coordination of existing data/model/loss/optimizer path without modifying training math or model behavior.
+
+**Files Changed**:
+- `tests/trainer_behavior_test.cpp` (NEW deterministic Trainer-level behavior test)
+- `CMakeLists.txt` (added `trainer_behavior_test` target, CTest registration, and `run_tests` dependency)
+- `docs/BUILD.md` (added build/run references for `trainer_behavior_test`)
+- `docs/ML_CORRECTNESS.md` (added Trainer-level behavior coverage section)
+- `docs/KNOWN_RISKS.md` (updated Trainer-level risk wording for covered scope)
+- `docs/REFACTOR_PLAN.md` (marked Trainer-level behavior follow-up complete; updated next likely follow-up)
+- `PROJECT_STATE.md` (this milestone note)
+
+**No production trainer/model math changes**:
+- No changes to Trainer training logic, LSTM/Dense/loss/metrics implementations, scaler/parser/StockData behavior, or optimizer formulas.
+
+**Trainer behaviors covered**:
+1. Tiny 1-epoch `Trainer::run(...)` on synthetic in-memory chronological data completes without throwing.
+2. Returned `TrainingResult` is finite and epoch-bounded (`totalEpochs`, `epochOfBestValLoss`, `bestValLoss`).
+3. Trainer output can be disabled via empty `resultsFilePath`.
+4. Trainer output can be redirected to a safe build-local path (`build/test_outputs/trainer_behavior_results.csv`).
+5. Source-tree outputs are guarded: `tests/results.csv` and `data/results.csv` remain unmodified by this Trainer test.
+
+**Coverage boundaries / practical API limits**:
+- Current Trainer API does not expose internal model parameters, so this test remains black-box and does not directly assert parameter deltas post-epoch.
+- Validation non-shuffle behavior is validated at lower levels and by existing integration tests; this Trainer-level test focuses on practical run/output behavior.
+- No claims are made about one-epoch loss improvement, long-run convergence, or profitability.
+
+**Commands Used**:
+```bash
+cd /home/caidenmarley/stock-bot && cmake --build build --target trainer_behavior_test
+cd /home/caidenmarley/stock-bot && ./build/trainer_behavior_test
+cd /home/caidenmarley/stock-bot && cmake --build build --target run_tests
+cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
+cd /home/caidenmarley/stock-bot && git status --short
+```
+
+**Results**:
+- `./build/trainer_behavior_test`: ✅ **2/2 PASSED**
+- `ctest --test-dir build --output-on-failure`: ✅ **15/15 tests passed**
+- No source-tree result file modifications observed for `tests/results.csv` or `data/results.csv` in this task.
+
+**Milestone 13K Conclusion**:
+- Confidence improved that Trainer can coordinate existing components in a tiny deterministic run while respecting output-path hygiene controls.
+- This does **not** prove full Trainer correctness across all hyperparameters, data regimes, or long training behavior.
+
 ---
 
 ## Summary
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–13J Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, end-to-end determinism audit, results-file hygiene improvements, and focused AdaBelief optimizer coverage are complete ✅
+  - **Milestone 2–13K Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, end-to-end determinism audit, results-file hygiene improvements, focused AdaBelief optimizer coverage, and focused Trainer-level behavior coverage are complete ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -1352,12 +1398,14 @@ cd /home/caidenmarley/stock-bot && git status --short
     - Milestone 13H: End-to-end determinism audit completed for current supported scope (`end_to_end_determinism_test`)
     - Milestone 13I: Results/output-path hygiene completed (`results_file_hygiene_test` + configurable trainer output path)
     - Milestone 13J: Focused AdaBelief optimizer coverage completed (`adabelief_test`)
-  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, `end_to_end_determinism_test`, `results_file_hygiene_test`, and `adabelief_test`
+    - Milestone 13K: Focused Trainer-level behavior coverage completed (`trainer_behavior_test`)
+  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, `end_to_end_determinism_test`, `results_file_hygiene_test`, `adabelief_test`, and `trainer_behavior_test`
 - LSTM backward/BPTT now has broader deterministic numerical verification across multiple configurations; coverage is improved but not exhaustive
 - Integration-level validation coverage is improved for one deterministic cross-component path, but still not exhaustive
 - Determinism coverage now includes controlled repeated-run path checks, but full executable-level determinism remains unverified
 - Trainer output path side effects are reduced via configurable/disable-able CSV writing, with remaining generated-artifact risk for user-selected paths and hyperparameter search output
 - AdaBelief behavior now has focused deterministic coverage, but optimizer correctness is still not exhaustively proven in full training contexts
+- Trainer-level behavior now has focused black-box coverage for tiny-run coordination and output hygiene, but internal parameter-transition assertions are still limited by API visibility
 
 **Main Risks**: 
 - LSTM gradient verification is broader than before but still not exhaustive, plus residual validation leakage risk (reduced by Milestone 12 but not exhaustively eliminated)
@@ -1385,6 +1433,7 @@ cd /home/caidenmarley/stock-bot && git status --short
 18. ✅ Full end-to-end determinism audit for the numerical pipeline (Milestone 13H current supported scope) – **COMPLETE (July 4, 2026)**
 19. ✅ Generated output path hygiene and Trainer result-file behavior audit (Milestone 13I) – **COMPLETE (July 4, 2026)**
 20. ✅ Focused AdaBelief optimizer coverage (Milestone 13J) – **COMPLETE (July 4, 2026)**
-21. Trainer-level optimizer-policy interaction coverage (Dense SGD-style step vs LSTM AdaBelief path under controlled tiny training scenarios) – **Next step**
+21. ✅ Focused Trainer-level behavior coverage (Milestone 13K) – **COMPLETE (July 4, 2026)**
+22. CLI-level smoke coverage for output flags (`--results-file` / `--no-results`) and executable-path output hygiene checks – **Next step**
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.

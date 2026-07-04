@@ -52,6 +52,8 @@ add_executable(end_to_end_determinism_test tests/end_to_end_determinism_test.cpp
 add_executable(results_file_hygiene_test tests/results_file_hygiene_test.cpp ${SRC_FILES})
 # create adabelief_test exe, cmake --build build --target adabelief_test
 add_executable(adabelief_test tests/adabelief_test.cpp ${SRC_FILES})
+# create trainer_behavior_test exe, cmake --build build --target trainer_behavior_test
+add_executable(trainer_behavior_test tests/trainer_behavior_test.cpp ${SRC_FILES})
 
 add_test(NAME testbed COMMAND testbed)
 add_test(NAME parser_test COMMAND parser_test)
@@ -67,6 +69,7 @@ add_test(NAME integration_validation_test COMMAND integration_validation_test)
 add_test(NAME end_to_end_determinism_test COMMAND end_to_end_determinism_test)
 add_test(NAME results_file_hygiene_test COMMAND results_file_hygiene_test)
 add_test(NAME adabelief_test COMMAND adabelief_test)
+add_test(NAME trainer_behavior_test COMMAND trainer_behavior_test)
 
 add_custom_target(run_tests
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
@@ -85,4 +88,5 @@ add_custom_target(run_tests
         end_to_end_determinism_test
         results_file_hygiene_test
         adabelief_test
+        trainer_behavior_test
 )

@@ -14,6 +14,7 @@
 - Gradient clipping policy is component-wise (LSTM vector and Dense parameters clipped separately), not one combined whole-model norm.
 - Reproducibility is only partially verified: deterministic behavior is covered for a controlled in-memory path, but full executable-level determinism is not exhaustively proven.
 - Current seed wiring focuses on LSTM initialization path; Dense initialization has no production seed API and trainer shuffle ordering is not wired to CLI seed control.
+- Trainer-level behavior is now covered for a tiny deterministic black-box run (including safe output-path handling), but full training-loop correctness and optimizer-policy interactions are still not exhaustively proven.
 
 ## Metrics and Evaluation Risks
 
