@@ -113,6 +113,40 @@ Important boundary conditions:
 - `Trainer::run` uses an internal static thread-local shuffle RNG seeded to a fixed value and not wired to CLI seed, limiting externally controlled same-seed reproducibility claims for training-order behavior.
 - Trainer writes `tests/results.csv`, so trainer-level repeated-run checks include file side effects unless isolated.
 
+## Dense Seeding/API Design Audit (Milestone 13N)
+
+Milestone 13N is a design-only audit (no code changes) on how to make Dense initialization deterministic in production paths.
+
+Current Dense determinism situation:
+
+- Dense initializes weights with `Eigen::RowVectorXd::Random(hiddenSize) * 0.01` and bias to `0.0`.
+- Dense currently has no constructor seed parameter and no global seed hook.
+- Dense parameters are publicly accessible (`W`, `b`), so tests can override values directly.
+- Determinism tests currently rely on direct test-side Dense overrides for controlled-path checks.
+
+Design options considered:
+
+- Option A: add optional constructor seed parameter to Dense.
+	- Example shape: `Dense(int hiddenSize, std::optional<uint32_t> initSeed = std::nullopt)`.
+	- Preserve current behavior when no seed is provided.
+	- Use local RNG path only when seed is supplied.
+- Option B: add global/static seed path similar to `LSTMCell::setGlobalInitSeed(...)`.
+	- Consistent with existing LSTM style, but introduces/extends hidden global state.
+- Option C: add explicit initializer/setter API for initialization path.
+	- Could be `setParameters(...)` or `initializeFromSeed(...)` style, while keeping constructor unchanged.
+	- More explicit but requires extra call sites and lifecycle discipline.
+- Option D: leave Dense unchanged and continue test-side deterministic overrides only.
+	- Lowest implementation effort, but keeps production same-seed determinism claims limited.
+
+Recommended direction for a future implementation milestone:
+
+- Prefer Option A (optional constructor seed parameter) as the smallest practical production-path improvement.
+- Rationale:
+	- Minimal API disruption: default path preserves current behavior.
+	- Better testability and cleaner Trainer/main propagation of seed values.
+	- Avoids adding new hidden global state.
+	- Keeps room for future alignment with LSTM seeding docs without forcing global seeding.
+
 ## AdaBelief Coverage (Milestone 13J)
 
 Milestone 13J adds focused deterministic tests for the currently implemented `AdaBelief::update` behavior:

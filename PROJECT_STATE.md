@@ -1466,13 +1466,61 @@ cd /home/caidenmarley/stock-bot && git status --short
 - API behavior is clearer: `randomSearch` is now explicitly unavailable rather than silently undefined.
 - This does not implement full random search or integrate search flow into main runtime path.
 
+### **Milestone 13N: Dense Seeding/API Design Audit (Docs-Only)** ✅ COMPLETE (July 5, 2026)
+
+**Scope**: Design/audit-only milestone to evaluate deterministic Dense initialization options and recommend the smallest safe future implementation, without changing production code or tests.
+
+**Files Inspected**:
+- `include/model/dense.h`
+- `src/model/trainer.cpp`
+- `tests/reproducibility_test.cpp`
+- `tests/end_to_end_determinism_test.cpp`
+- `tests/trainer_behavior_test.cpp`
+- `tests/dense_gradient_test.cpp`
+- `docs/ML_CORRECTNESS.md`
+- `docs/KNOWN_RISKS.md`
+- `docs/REFACTOR_PLAN.md`
+- `PROJECT_STATE.md`
+
+**Files Changed (docs only)**:
+- `docs/ML_CORRECTNESS.md`
+- `docs/KNOWN_RISKS.md`
+- `docs/REFACTOR_PLAN.md`
+- `PROJECT_STATE.md`
+
+**No code/test/build-system changes**:
+- No edits to `src/`, `include/`, `tests/`, `CMakeLists.txt`, or `main.cpp`.
+- No production behavior changed.
+
+**Current Dense determinism limitation (audit result)**:
+1. Dense currently initializes with `Eigen::RowVectorXd::Random(...)` and has no production seed API.
+2. Dense parameters are publicly writable, so deterministic tests currently rely on direct test-side overrides.
+3. This limits stronger production same-seed determinism claims for Trainer/main paths.
+
+**Design options considered**:
+1. Option A: add optional Dense constructor seed parameter (preferred).
+2. Option B: add global/static Dense seed path similar to LSTM global seed.
+3. Option C: add explicit initializer/setter API for deterministic parameter initialization.
+4. Option D: leave Dense unchanged and continue test-side overrides only.
+
+**Recommended option**:
+- Prefer Option A for future implementation: optional constructor seed parameter with default-preserving behavior.
+- Why: minimal API disruption, practical seed plumbing for Trainer/main, improved testability, and avoids introducing additional hidden global state.
+
+**Validation for this docs-only milestone**:
+- `git diff --check` recommended and run to verify clean doc edits.
+
+**Milestone 13N Conclusion**:
+- Dense seeding/API design direction is now documented and bounded for a small future implementation task.
+- Determinism is **not** solved yet; this milestone is design-only.
+
 ---
 
 ## Summary
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–13M Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, end-to-end determinism audit, results-file hygiene improvements, focused AdaBelief optimizer coverage, focused Trainer-level behavior coverage, executable CLI smoke coverage, and hyperparameter-search cleanup/audit are complete ✅
+  - **Milestone 2–13N Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, end-to-end determinism audit, results-file hygiene improvements, focused AdaBelief optimizer coverage, focused Trainer-level behavior coverage, executable CLI smoke coverage, hyperparameter-search cleanup/audit, and Dense seeding/API design audit are complete ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -1497,6 +1545,7 @@ cd /home/caidenmarley/stock-bot && git status --short
     - Milestone 13K: Focused Trainer-level behavior coverage completed (`trainer_behavior_test`)
     - Milestone 13L: CLI smoke coverage completed (`cli_smoke_test`)
     - Milestone 13M: Hyperparameter-search cleanup/audit completed (`hyperparam_search_test`)
+    - Milestone 13N: Dense seeding/API design audit completed (docs only; implementation pending)
   - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, `end_to_end_determinism_test`, `results_file_hygiene_test`, `adabelief_test`, `trainer_behavior_test`, `cli_smoke_test`, and `hyperparam_search_test`
 - LSTM backward/BPTT now has broader deterministic numerical verification across multiple configurations; coverage is improved but not exhaustive
 - Integration-level validation coverage is improved for one deterministic cross-component path, but still not exhaustive
@@ -1506,6 +1555,7 @@ cd /home/caidenmarley/stock-bot && git status --short
 - Trainer-level behavior now has focused black-box coverage for tiny-run coordination and output hygiene, but internal parameter-transition assertions are still limited by API visibility
 - CLI smoke coverage now verifies short real-executable runs and output-flag hygiene (`--no-results`/safe `--results-file`) for covered commands, but broad CLI-option behavior remains unverified
 - Hyperparameter search now has safe default output hygiene and explicit randomSearch unavailability, but search flow remains outside main runtime integration
+- Dense deterministic initialization direction is now documented (Milestone 13N), but production Dense seed API is still pending implementation
 
 **Main Risks**: 
 - LSTM gradient verification is broader than before but still not exhaustive, plus residual validation leakage risk (reduced by Milestone 12 but not exhaustively eliminated)
@@ -1536,6 +1586,7 @@ cd /home/caidenmarley/stock-bot && git status --short
 21. ✅ Focused Trainer-level behavior coverage (Milestone 13K) – **COMPLETE (July 4, 2026)**
 22. ✅ CLI-level smoke coverage for output flags (`--results-file` / `--no-results`) and executable-path output hygiene checks (Milestone 13L) – **COMPLETE (July 5, 2026)**
 23. ✅ Hyperparameter-search output-path cleanup and API-clarity audit (Milestone 13M) – **COMPLETE (July 5, 2026)**
-24. Dense initialization seeding/API design discussion for stronger end-to-end reproducibility controls without changing training math – **Next step**
+24. ✅ Dense initialization seeding/API design audit for stronger end-to-end reproducibility controls (Milestone 13N, docs-only) – **COMPLETE (July 5, 2026)**
+25. Implement Dense deterministic initialization API (preferred: optional constructor seed parameter with default-preserving behavior) and add focused reproducibility coverage – **Next step**
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.

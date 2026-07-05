@@ -161,4 +161,19 @@ Reason:
 - Trainer-level behavior coverage for a controlled tiny run is now completed in Milestone 13K (`tests/trainer_behavior_test.cpp`).
 - CLI-level smoke coverage for result-output flags (`--results-file` / `--no-results`) is now completed in Milestone 13L (`tests/cli_smoke_test.cpp`).
 - Hyperparameter-search output-path cleanup and behavior audit are now completed in Milestone 13M (`tests/hyperparam_search_test.cpp`).
-- Next likely low-risk follow-up: Dense initialization seed/API design discussion to improve end-to-end reproducibility controls without changing training math.
+- Dense initialization seed/API design discussion is now completed in Milestone 13N (design-only docs audit, no code changes).
+- Next likely low-risk follow-up: implement the chosen Dense deterministic initialization option (preferred: optional constructor seed parameter with default-preserving behavior), then add focused reproducibility coverage for Trainer/main seed plumbing.
+
+### Task: Implement Dense deterministic initialization API (follow-up to Milestone 13N design audit)
+- Motivation: production same-seed reproducibility claims remain limited because Dense has no production seed path.
+- Preferred design from audit: optional constructor seed parameter that preserves current behavior when omitted.
+- Scope guardrails:
+  - No ML math changes.
+  - Preserve existing constructor behavior by default.
+  - Keep implementation minimal and reviewable.
+- Files likely touched: `include/model/dense.h`, Dense call sites in trainer/tests as needed, and determinism docs/tests.
+- Risk level: Medium.
+- Suggested validation command:
+  - `cd /home/caidenmarley/stock-bot && cmake --build build --target run_tests`
+  - `cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure`
+- Production code changes expected: Yes (future milestone; not part of 13N).
