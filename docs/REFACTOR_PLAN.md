@@ -158,4 +158,5 @@ Reason:
 - Generated output path hygiene and Trainer result-file behavior audit is now completed in Milestone 13I.
 - Focused AdaBelief optimizer coverage is now completed in Milestone 13J (`tests/adabelief_test.cpp`).
 - Trainer-level behavior coverage for a controlled tiny run is now completed in Milestone 13K (`tests/trainer_behavior_test.cpp`).
-- Next likely low-risk follow-up: CLI-level smoke coverage for result-output flags (`--results-file` / `--no-results`) to strengthen executable-path safety checks without changing ML math.
+- CLI-level smoke coverage for result-output flags (`--results-file` / `--no-results`) is now completed in Milestone 13L (`tests/cli_smoke_test.cpp`).
+- Next likely low-risk follow-up: hyperparameter-search output-path cleanup (`data/results.csv` handling) and generated-artifact hygiene alignment with Trainer path controls.

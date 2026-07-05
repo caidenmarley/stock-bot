@@ -54,6 +54,9 @@ add_executable(results_file_hygiene_test tests/results_file_hygiene_test.cpp ${S
 add_executable(adabelief_test tests/adabelief_test.cpp ${SRC_FILES})
 # create trainer_behavior_test exe, cmake --build build --target trainer_behavior_test
 add_executable(trainer_behavior_test tests/trainer_behavior_test.cpp ${SRC_FILES})
+# create cli_smoke_test exe, cmake --build build --target cli_smoke_test
+add_executable(cli_smoke_test tests/cli_smoke_test.cpp ${SRC_FILES})
+add_dependencies(cli_smoke_test stock_bot)
 
 add_test(NAME testbed COMMAND testbed)
 add_test(NAME parser_test COMMAND parser_test)
@@ -70,6 +73,7 @@ add_test(NAME end_to_end_determinism_test COMMAND end_to_end_determinism_test)
 add_test(NAME results_file_hygiene_test COMMAND results_file_hygiene_test)
 add_test(NAME adabelief_test COMMAND adabelief_test)
 add_test(NAME trainer_behavior_test COMMAND trainer_behavior_test)
+add_test(NAME cli_smoke_test COMMAND cli_smoke_test)
 
 add_custom_target(run_tests
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
@@ -89,4 +93,5 @@ add_custom_target(run_tests
         results_file_hygiene_test
         adabelief_test
         trainer_behavior_test
+        cli_smoke_test
 )

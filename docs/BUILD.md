@@ -43,6 +43,7 @@ cmake --build . --target end_to_end_determinism_test
 cmake --build . --target results_file_hygiene_test
 cmake --build . --target adabelief_test
 cmake --build . --target trainer_behavior_test
+cmake --build . --target cli_smoke_test
 ```
 
 Build and run all registered tests in one command:
@@ -73,6 +74,11 @@ cd /home/caidenmarley/stock-bot
 ./build/results_file_hygiene_test
 ./build/adabelief_test
 ./build/trainer_behavior_test
+./build/cli_smoke_test
+
+# safe short stock_bot CLI smoke runs
+./build/stock_bot --epochs 1 --seed 0 --early-stop-patience 1 --no-results
+./build/stock_bot --epochs 1 --seed 0 --early-stop-patience 1 --results-file build/results/cli_smoke_results.csv
 ```
 
 Run the full suite through CTest (recommended):

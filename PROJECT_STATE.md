@@ -1370,13 +1370,58 @@ cd /home/caidenmarley/stock-bot && git status --short
 - Confidence improved that Trainer can coordinate existing components in a tiny deterministic run while respecting output-path hygiene controls.
 - This does **not** prove full Trainer correctness across all hyperparameters, data regimes, or long training behavior.
 
+### **Milestone 13L: CLI Smoke Tests for stock_bot Executable** ✅ COMPLETE (July 5, 2026)
+
+**Scope**: Add small smoke/integration coverage for the real `stock_bot` executable CLI with short safe runs and output-path hygiene checks.
+
+**Files Changed**:
+- `tests/cli_smoke_test.cpp` (NEW CLI smoke test invoking the built `stock_bot` executable)
+- `CMakeLists.txt` (added `cli_smoke_test` target, CTest registration, `run_tests` dependency, and `cli_smoke_test -> stock_bot` target dependency)
+- `docs/BUILD.md` (added `cli_smoke_test` build/run references and safe short CLI examples)
+- `docs/KNOWN_RISKS.md` (updated CLI/output-side-effect risk wording for covered scope)
+- `docs/REFACTOR_PLAN.md` (marked CLI smoke follow-up complete; updated next likely follow-up)
+- `PROJECT_STATE.md` (this milestone note)
+
+**Production-code change status**:
+- No changes to ML math, training behavior, validation logic, model implementations, parser/scaler/StockData, or Trainer logic.
+- No `main.cpp` change was required; one CMake wiring fix was made so `cli_smoke_test` reliably builds `stock_bot` first.
+
+**CLI behaviors covered**:
+1. Real executable minimal run exits successfully:
+  - `stock_bot --epochs 1 --seed 0 --early-stop-patience 1 --no-results`
+2. Real executable minimal run exits successfully with safe output path:
+  - `stock_bot --epochs 1 --seed 0 --early-stop-patience 1 --results-file build/test_outputs/cli_smoke_results.csv`
+3. Build-local results file is created and non-empty when `--results-file` is provided.
+4. Source-tree output guards: `tests/results.csv` and `data/results.csv` are not created/modified by the smoke test runs.
+
+**Observed limitation documented**:
+- CLI smoke test currently depends on repository dataset presence because `stock_bot` uses fixed input path `data/AAAU.csv` and does not expose a CLI data-path argument.
+
+**Commands Used**:
+```bash
+cd /home/caidenmarley/stock-bot && cmake --build build --target cli_smoke_test
+cd /home/caidenmarley/stock-bot && ./build/cli_smoke_test
+cd /home/caidenmarley/stock-bot && cmake --build build --target run_tests
+cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
+cd /home/caidenmarley/stock-bot && git status --short
+```
+
+**Results**:
+- `./build/cli_smoke_test`: ✅ **1/1 PASSED**
+- `ctest --test-dir build --output-on-failure`: ✅ **16/16 tests passed**
+- No source-tree result-file modifications observed for `tests/results.csv` or `data/results.csv` in this task.
+
+**Milestone 13L Conclusion**:
+- Confidence improved for short executable-level CLI safety after result-path hygiene changes.
+- This remains smoke-level coverage and does not prove full end-to-end CLI/behavior correctness across all options and runtime regimes.
+
 ---
 
 ## Summary
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–13K Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, end-to-end determinism audit, results-file hygiene improvements, focused AdaBelief optimizer coverage, and focused Trainer-level behavior coverage are complete ✅
+  - **Milestone 2–13L Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, end-to-end determinism audit, results-file hygiene improvements, focused AdaBelief optimizer coverage, focused Trainer-level behavior coverage, and executable CLI smoke coverage are complete ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -1399,13 +1444,15 @@ cd /home/caidenmarley/stock-bot && git status --short
     - Milestone 13I: Results/output-path hygiene completed (`results_file_hygiene_test` + configurable trainer output path)
     - Milestone 13J: Focused AdaBelief optimizer coverage completed (`adabelief_test`)
     - Milestone 13K: Focused Trainer-level behavior coverage completed (`trainer_behavior_test`)
-  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, `end_to_end_determinism_test`, `results_file_hygiene_test`, `adabelief_test`, and `trainer_behavior_test`
+    - Milestone 13L: CLI smoke coverage completed (`cli_smoke_test`)
+  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, `end_to_end_determinism_test`, `results_file_hygiene_test`, `adabelief_test`, `trainer_behavior_test`, and `cli_smoke_test`
 - LSTM backward/BPTT now has broader deterministic numerical verification across multiple configurations; coverage is improved but not exhaustive
 - Integration-level validation coverage is improved for one deterministic cross-component path, but still not exhaustive
 - Determinism coverage now includes controlled repeated-run path checks, but full executable-level determinism remains unverified
 - Trainer output path side effects are reduced via configurable/disable-able CSV writing, with remaining generated-artifact risk for user-selected paths and hyperparameter search output
 - AdaBelief behavior now has focused deterministic coverage, but optimizer correctness is still not exhaustively proven in full training contexts
 - Trainer-level behavior now has focused black-box coverage for tiny-run coordination and output hygiene, but internal parameter-transition assertions are still limited by API visibility
+- CLI smoke coverage now verifies short real-executable runs and output-flag hygiene (`--no-results`/safe `--results-file`) for covered commands, but broad CLI-option behavior remains unverified
 
 **Main Risks**: 
 - LSTM gradient verification is broader than before but still not exhaustive, plus residual validation leakage risk (reduced by Milestone 12 but not exhaustively eliminated)
@@ -1434,6 +1481,7 @@ cd /home/caidenmarley/stock-bot && git status --short
 19. ✅ Generated output path hygiene and Trainer result-file behavior audit (Milestone 13I) – **COMPLETE (July 4, 2026)**
 20. ✅ Focused AdaBelief optimizer coverage (Milestone 13J) – **COMPLETE (July 4, 2026)**
 21. ✅ Focused Trainer-level behavior coverage (Milestone 13K) – **COMPLETE (July 4, 2026)**
-22. CLI-level smoke coverage for output flags (`--results-file` / `--no-results`) and executable-path output hygiene checks – **Next step**
+22. ✅ CLI-level smoke coverage for output flags (`--results-file` / `--no-results`) and executable-path output hygiene checks (Milestone 13L) – **COMPLETE (July 5, 2026)**
+23. Hyperparameter-search output-path cleanup (`data/results.csv` generated-artifact handling) and hygiene alignment with Trainer output controls – **Next step**
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.
