@@ -272,6 +272,57 @@ void test_comparison_rows_serialize_directly() {
     expectTrue(csvRows[4].rfind("prev_return_momentum,", 0) == 0, "serialized prev_return_momentum row missing or out of order");
 }
 
+void test_csv_block_starts_with_exact_header() {
+    const std::string block = metrics::benchmarkComparisonToCsvBlock({});
+    const std::string expectedPrefix =
+        "strategy,sharpe_net,avg_turnover,cumulative_net_return,num_observations\n";
+    expectTrue(block == expectedPrefix, "CSV block should contain exact header and newline for empty input");
+}
+
+void test_csv_block_contains_header_and_all_rows_in_order() {
+    const std::vector<metrics::BenchmarkSummary> rows = {
+        {"model", 1.0, 0.1, 0.2, 3},
+        {"cash", 0.0, 0.0, 0.0, 3},
+        {"buy_and_hold", 2.0, 1.0, 0.3, 3},
+    };
+
+    const std::string block = metrics::benchmarkComparisonToCsvBlock(rows);
+    const std::string expected =
+        "strategy,sharpe_net,avg_turnover,cumulative_net_return,num_observations\n"
+        "model,1.000000,0.100000,0.200000,3\n"
+        "cash,0.000000,0.000000,0.000000,3\n"
+        "buy_and_hold,2.000000,1.000000,0.300000,3\n";
+    expectTrue(block == expected, "CSV block header/rows/order mismatch");
+}
+
+void test_csv_block_newline_convention_is_deterministic() {
+    const std::vector<metrics::BenchmarkSummary> rows = {
+        {"model", 1.0, 0.1, 0.2, 3},
+    };
+    const std::string block = metrics::benchmarkComparisonToCsvBlock(rows);
+
+    expectTrue(!block.empty(), "CSV block should not be empty");
+    expectTrue(block.back() == '\n', "CSV block should end with newline");
+    expectTrue(block.find("\r") == std::string::npos, "CSV block should use '\\n' and not contain carriage returns");
+}
+
+void test_csv_block_accepts_model_and_benchmark_output_directly() {
+    metrics::ProfitAndLossParams params{0.0, 0.001, 252};
+    const std::vector<double> preds = {0.2, -0.1, 0.3, -0.4};
+    const std::vector<double> returns = {0.01, -0.02, 0.03, -0.04};
+
+    const auto rows = metrics::evaluateModelAndBenchmarks(preds, returns, params, 123u);
+    const std::string block = metrics::benchmarkComparisonToCsvBlock(rows);
+
+    expectTrue(block.rfind("strategy,sharpe_net,avg_turnover,cumulative_net_return,num_observations\n", 0) == 0,
+               "CSV block should start with fixed header");
+    expectTrue(block.find("\nmodel,") != std::string::npos, "CSV block should contain model row");
+    expectTrue(block.find("\ncash,") != std::string::npos, "CSV block should contain cash row");
+    expectTrue(block.find("\nbuy_and_hold,") != std::string::npos, "CSV block should contain buy_and_hold row");
+    expectTrue(block.find("\nrandom_noskill,") != std::string::npos, "CSV block should contain random_noskill row");
+    expectTrue(block.find("\nprev_return_momentum,") != std::string::npos, "CSV block should contain prev_return_momentum row");
+}
+
 } // namespace
 
 int main() {
@@ -293,6 +344,10 @@ int main() {
         {"csv empty input", test_csv_empty_input_produces_no_data_rows},
         {"csv serializer non mutating", test_csv_serializer_does_not_mutate_input},
         {"comparison rows serialize directly", test_comparison_rows_serialize_directly},
+        {"csv block exact header", test_csv_block_starts_with_exact_header},
+        {"csv block contains all rows", test_csv_block_contains_header_and_all_rows_in_order},
+        {"csv block newline convention", test_csv_block_newline_convention_is_deterministic},
+        {"csv block accepts comparison rows", test_csv_block_accepts_model_and_benchmark_output_directly},
     };
 
     std::size_t passed = 0;

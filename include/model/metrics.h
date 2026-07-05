@@ -174,4 +174,15 @@ std::string benchmarkComparisonCsvHeader();
 std::vector<std::string> benchmarkComparisonToCsvRows(
     const std::vector<BenchmarkSummary>& rows
 );
+
+/**
+ * Compose a complete CSV block in-memory using the stable header and row serializer.
+ * Output convention:
+ * - always includes header line
+ * - uses '\n' newline separator
+ * - ends with a trailing '\n'
+ */
+std::string benchmarkComparisonToCsvBlock(
+    const std::vector<BenchmarkSummary>& rows
+);
 }

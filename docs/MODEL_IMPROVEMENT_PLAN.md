@@ -211,6 +211,12 @@ Added compact serializer helpers:
 - preserves input row order
 - empty input convention: header exists conceptually via helper, row serializer returns zero data rows
 
+Added complete CSV block helper:
+- returns one in-memory CSV string built from existing header + row serializers
+- deterministic newline convention uses '\n'
+- empty input convention is explicit: header plus trailing newline only
+- no file writes and no recomputation/evaluation logic
+
 Current convention note:
 - helper size checks follow existing metrics conventions and rely on assert for prediction/return length mismatch
 - this is acceptable for current internal/testing usage but is not a user-facing runtime error API

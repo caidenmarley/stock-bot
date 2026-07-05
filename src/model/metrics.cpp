@@ -250,4 +250,19 @@ std::vector<std::string> benchmarkComparisonToCsvRows(
     return out;
 }
 
+std::string benchmarkComparisonToCsvBlock(
+    const std::vector<BenchmarkSummary>& rows
+) {
+    const std::vector<std::string> csvRows = benchmarkComparisonToCsvRows(rows);
+
+    std::string out;
+    out += benchmarkComparisonCsvHeader();
+    out += "\n";
+    for (const auto& line : csvRows) {
+        out += line;
+        out += "\n";
+    }
+    return out;
+}
+
 }
