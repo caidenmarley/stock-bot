@@ -125,6 +125,7 @@ Each task should be executed in a small, reviewable, separate commit/branch with
   - docs-only review
   - if header/API cleanup later: rebuild all targets that include search headers.
 - Production code changes expected: Not for planning/docs; possible header/API cleanup later.
+- Status: Completed in Milestone 13M (`gridSearch` output-path cleanup + `randomSearch` explicit not-implemented behavior + `hyperparam_search_test`).
 
 ### Task: Decide whether predictionsToScaledPositions should be implemented or removed from public header
 - Motivation: Public declaration without implementation can confuse consumers and future tests.
@@ -159,4 +160,5 @@ Reason:
 - Focused AdaBelief optimizer coverage is now completed in Milestone 13J (`tests/adabelief_test.cpp`).
 - Trainer-level behavior coverage for a controlled tiny run is now completed in Milestone 13K (`tests/trainer_behavior_test.cpp`).
 - CLI-level smoke coverage for result-output flags (`--results-file` / `--no-results`) is now completed in Milestone 13L (`tests/cli_smoke_test.cpp`).
-- Next likely low-risk follow-up: hyperparameter-search output-path cleanup (`data/results.csv` handling) and generated-artifact hygiene alignment with Trainer path controls.
+- Hyperparameter-search output-path cleanup and behavior audit are now completed in Milestone 13M (`tests/hyperparam_search_test.cpp`).
+- Next likely low-risk follow-up: Dense initialization seed/API design discussion to improve end-to-end reproducibility controls without changing training math.

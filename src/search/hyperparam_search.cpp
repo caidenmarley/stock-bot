@@ -2,6 +2,8 @@
 #include <unordered_map>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
+#include <stdexcept>
 
 void gridSearch(
     const std::vector<HyperParam>& params,
@@ -20,9 +22,20 @@ void gridSearch(
     const std::vector<PriceData>& rawValidationData,
     int epochs,
     double stoppingToleranceLoss, 
-    int maxEpochsWithNoImprovement
+    int maxEpochsWithNoImprovement,
+    const std::string& resultsFilePath
 ){
-    std::ofstream csv("data/results.csv");
+    const std::filesystem::path outputPath(resultsFilePath);
+    if (outputPath.has_parent_path()) {
+        std::error_code mkErr;
+        std::filesystem::create_directories(outputPath.parent_path(), mkErr);
+    }
+
+    std::ofstream csv(resultsFilePath);
+    if (!csv) {
+        throw std::runtime_error("Failed to open hyperparameter search results file: " + resultsFilePath);
+    }
+
     csv << "hiddenSize,sequenceLength,batchSize,learningRate,delta,windowSize"
            ",bestValLoss,epochOfBestValLoss,totalEpochs\n";
 
@@ -122,5 +135,28 @@ void gridSearch(
               << "Best hyperparameters:\n";
     for (auto& p : bestHashmap)
         std::cout << "  " << p.first << " = " << p.second << "\n";
-    std::cout << "Results saved to results.csv\n";
+    std::cout << "Results saved to " << resultsFilePath << "\n";
+}
+
+void randomSearch(
+    const std::vector<HyperParam>&,
+    int,
+    int,
+    int,
+    int,
+    double,
+    double,
+    size_t,
+    double,
+    double,
+    double,
+    int,
+    const std::vector<PriceData>&,
+    const std::vector<PriceData>&,
+    int,
+    double,
+    int,
+    int
+) {
+    throw std::logic_error("randomSearch is not implemented yet");
 }

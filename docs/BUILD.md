@@ -44,6 +44,7 @@ cmake --build . --target results_file_hygiene_test
 cmake --build . --target adabelief_test
 cmake --build . --target trainer_behavior_test
 cmake --build . --target cli_smoke_test
+cmake --build . --target hyperparam_search_test
 ```
 
 Build and run all registered tests in one command:
@@ -75,6 +76,7 @@ cd /home/caidenmarley/stock-bot
 ./build/adabelief_test
 ./build/trainer_behavior_test
 ./build/cli_smoke_test
+./build/hyperparam_search_test
 
 # safe short stock_bot CLI smoke runs
 ./build/stock_bot --epochs 1 --seed 0 --early-stop-patience 1 --no-results
@@ -101,8 +103,12 @@ Trainer-generated metrics output is now explicit and configurable:
 	- `--results-file PATH` to select an explicit output file
 	- `--no-results` to disable trainer CSV output
 
-There is also hyperparameter-search output logic for:
-- `data/results.csv`
+Hyperparameter-search output now defaults to:
+- `build/results/hyperparam_search_results.csv`
+
+You can call `gridSearch(...)` with an explicit output path to keep results build-local (for example under `build/test_outputs/`).
+
+`randomSearch(...)` is currently declared but intentionally not implemented; it throws a clear `std::logic_error` when called.
 
 These are generated artifacts and should not usually be committed as source changes.
 Use build-local paths (for example under `build/results/` or `build/test_outputs/`) to avoid dirty source-tree files during tests and audits.

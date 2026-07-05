@@ -36,9 +36,11 @@ void gridSearch(
     const std::vector<PriceData>& rawValidationData,
     int epochs,
     double stoppingToleranceLoss, 
-    int maxEpochsWithNoImprovement
+    int maxEpochsWithNoImprovement,
+    const std::string& resultsFilePath = "build/results/hyperparam_search_results.csv"
 );
 
+// Not implemented yet; calling this will throw std::logic_error.
 void randomSearch(
     const std::vector<HyperParam>& params,
     int numFeatures, 

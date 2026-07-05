@@ -57,6 +57,8 @@ add_executable(trainer_behavior_test tests/trainer_behavior_test.cpp ${SRC_FILES
 # create cli_smoke_test exe, cmake --build build --target cli_smoke_test
 add_executable(cli_smoke_test tests/cli_smoke_test.cpp ${SRC_FILES})
 add_dependencies(cli_smoke_test stock_bot)
+# create hyperparam_search_test exe, cmake --build build --target hyperparam_search_test
+add_executable(hyperparam_search_test tests/hyperparam_search_test.cpp ${SRC_FILES})
 
 add_test(NAME testbed COMMAND testbed)
 add_test(NAME parser_test COMMAND parser_test)
@@ -74,6 +76,7 @@ add_test(NAME results_file_hygiene_test COMMAND results_file_hygiene_test)
 add_test(NAME adabelief_test COMMAND adabelief_test)
 add_test(NAME trainer_behavior_test COMMAND trainer_behavior_test)
 add_test(NAME cli_smoke_test COMMAND cli_smoke_test)
+add_test(NAME hyperparam_search_test COMMAND hyperparam_search_test)
 
 add_custom_target(run_tests
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
@@ -94,4 +97,5 @@ add_custom_target(run_tests
         adabelief_test
         trainer_behavior_test
         cli_smoke_test
+        hyperparam_search_test
 )

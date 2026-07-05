@@ -1415,13 +1415,64 @@ cd /home/caidenmarley/stock-bot && git status --short
 - Confidence improved for short executable-level CLI safety after result-path hygiene changes.
 - This remains smoke-level coverage and does not prove full end-to-end CLI/behavior correctness across all options and runtime regimes.
 
+### **Milestone 13M: Hyperparameter-Search Cleanup and Output Hygiene Audit** ✅ COMPLETE (July 5, 2026)
+
+**Scope**: Audit and small cleanup of hyperparameter search behavior focused on output-path hygiene and API clarity, without changing ML training math.
+
+**Files Changed**:
+- `include/search/hyperparam_search.h` (added optional explicit `resultsFilePath` for `gridSearch`; documented `randomSearch` not-implemented behavior)
+- `src/search/hyperparam_search.cpp` (made `gridSearch` output path configurable with safe build-local default; added explicit `randomSearch` stub that throws `std::logic_error`)
+- `tests/hyperparam_search_test.cpp` (NEW focused tiny test for safe output path and randomSearch behavior)
+- `CMakeLists.txt` (added `hyperparam_search_test` target, CTest registration, and `run_tests` dependency)
+- `docs/BUILD.md` (documented hyperparameter-search output path and new test target)
+- `docs/KNOWN_RISKS.md` (updated hyperparameter-search output-side-effect and randomSearch wording)
+- `docs/REFACTOR_PLAN.md` (marked hyperparameter cleanup/audit complete; updated next likely follow-up)
+- `PROJECT_STATE.md` (this milestone note)
+
+**No ML behavior changes**:
+- No changes to LSTM/Dense/optimizer/loss/math, parser/scaler/StockData behavior, validation logic, trainer internals, or main training flow.
+
+**Hyperparameter-search behavior before**:
+1. `gridSearch` always wrote to hardcoded `data/results.csv`.
+2. Output path could not be configured from API.
+3. `randomSearch` was declared in header but not defined in source.
+
+**Hyperparameter-search behavior after**:
+1. `gridSearch` accepts explicit `resultsFilePath` and now defaults to safe build-local `build/results/hyperparam_search_results.csv`.
+2. `gridSearch` creates parent directories for output path as needed and throws clear error if output file cannot be opened.
+3. `randomSearch` is now explicitly defined as unavailable and throws clear `std::logic_error("randomSearch is not implemented yet")`.
+
+**Focused test coverage (`hyperparam_search_test`)**:
+1. Tiny synthetic-data `gridSearch` run writes to explicit safe build-local path (`build/test_outputs/hyperparam_search_results.csv`).
+2. Guard checks verify no modification to `tests/results.csv` or `data/results.csv`.
+3. `randomSearch` call is verified to throw clear not-implemented error.
+
+**Commands Used**:
+```bash
+cd /home/caidenmarley/stock-bot && cmake --build build --target hyperparam_search_test
+cd /home/caidenmarley/stock-bot && ./build/hyperparam_search_test
+cd /home/caidenmarley/stock-bot && cmake --build build --target run_tests
+cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
+cd /home/caidenmarley/stock-bot && git status --short
+```
+
+**Results**:
+- `./build/hyperparam_search_test`: ✅ **2/2 PASSED**
+- `ctest --test-dir build --output-on-failure`: ✅ **17/17 tests passed**
+- No source-tree `tests/results.csv` or `data/results.csv` created/modified in this task.
+
+**Milestone 13M Conclusion**:
+- Hyperparameter-search output hygiene is improved with explicit configurable path and safe default.
+- API behavior is clearer: `randomSearch` is now explicitly unavailable rather than silently undefined.
+- This does not implement full random search or integrate search flow into main runtime path.
+
 ---
 
 ## Summary
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–13L Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, end-to-end determinism audit, results-file hygiene improvements, focused AdaBelief optimizer coverage, focused Trainer-level behavior coverage, and executable CLI smoke coverage are complete ✅
+  - **Milestone 2–13M Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, end-to-end determinism audit, results-file hygiene improvements, focused AdaBelief optimizer coverage, focused Trainer-level behavior coverage, executable CLI smoke coverage, and hyperparameter-search cleanup/audit are complete ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -1445,7 +1496,8 @@ cd /home/caidenmarley/stock-bot && git status --short
     - Milestone 13J: Focused AdaBelief optimizer coverage completed (`adabelief_test`)
     - Milestone 13K: Focused Trainer-level behavior coverage completed (`trainer_behavior_test`)
     - Milestone 13L: CLI smoke coverage completed (`cli_smoke_test`)
-  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, `end_to_end_determinism_test`, `results_file_hygiene_test`, `adabelief_test`, `trainer_behavior_test`, and `cli_smoke_test`
+    - Milestone 13M: Hyperparameter-search cleanup/audit completed (`hyperparam_search_test`)
+  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, `end_to_end_determinism_test`, `results_file_hygiene_test`, `adabelief_test`, `trainer_behavior_test`, `cli_smoke_test`, and `hyperparam_search_test`
 - LSTM backward/BPTT now has broader deterministic numerical verification across multiple configurations; coverage is improved but not exhaustive
 - Integration-level validation coverage is improved for one deterministic cross-component path, but still not exhaustive
 - Determinism coverage now includes controlled repeated-run path checks, but full executable-level determinism remains unverified
@@ -1453,6 +1505,7 @@ cd /home/caidenmarley/stock-bot && git status --short
 - AdaBelief behavior now has focused deterministic coverage, but optimizer correctness is still not exhaustively proven in full training contexts
 - Trainer-level behavior now has focused black-box coverage for tiny-run coordination and output hygiene, but internal parameter-transition assertions are still limited by API visibility
 - CLI smoke coverage now verifies short real-executable runs and output-flag hygiene (`--no-results`/safe `--results-file`) for covered commands, but broad CLI-option behavior remains unverified
+- Hyperparameter search now has safe default output hygiene and explicit randomSearch unavailability, but search flow remains outside main runtime integration
 
 **Main Risks**: 
 - LSTM gradient verification is broader than before but still not exhaustive, plus residual validation leakage risk (reduced by Milestone 12 but not exhaustively eliminated)
@@ -1482,6 +1535,7 @@ cd /home/caidenmarley/stock-bot && git status --short
 20. ✅ Focused AdaBelief optimizer coverage (Milestone 13J) – **COMPLETE (July 4, 2026)**
 21. ✅ Focused Trainer-level behavior coverage (Milestone 13K) – **COMPLETE (July 4, 2026)**
 22. ✅ CLI-level smoke coverage for output flags (`--results-file` / `--no-results`) and executable-path output hygiene checks (Milestone 13L) – **COMPLETE (July 5, 2026)**
-23. Hyperparameter-search output-path cleanup (`data/results.csv` generated-artifact handling) and hygiene alignment with Trainer output controls – **Next step**
+23. ✅ Hyperparameter-search output-path cleanup and API-clarity audit (Milestone 13M) – **COMPLETE (July 5, 2026)**
+24. Dense initialization seeding/API design discussion for stronger end-to-end reproducibility controls without changing training math – **Next step**
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.
