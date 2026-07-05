@@ -1,5 +1,16 @@
 # ML_CORRECTNESS.md
 
+## Final Recovery Summary (Milestone 13Q Handoff)
+
+Recovery-phase ML checks are complete through Milestone 13Q for tested cases.
+
+Current tested scope includes parser/scaler/data pipeline checks, loss/metrics checks, Dense/LSTM gradient and parameter-order checks, time-series validation checks, integration-path checks, reproducibility/determinism checks for controllable paths, optimizer behavior checks for focused cases, trainer behavior smoke checks, output-path hygiene checks, and CLI smoke/invalid-argument checks.
+
+Important caution:
+- These results apply to tested cases only.
+- Coverage is not exhaustive.
+- This is not proof of profitability.
+
 ## Current Validation and Test Coverage
 
 The following areas have dedicated coverage from milestones 4-13O:

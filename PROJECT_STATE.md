@@ -1662,6 +1662,32 @@ cd /home/caidenmarley/stock-bot && git status --short
 - CLI handling is clearer and safer for covered invalid-argument cases.
 - This does not prove exhaustive CLI parser robustness for every possible option combination.
 
+## Recovery-Phase Final Handoff (Through Milestone 13Q)
+
+Recovery status:
+- Recovery phase is complete through Milestone 13Q.
+- Recovery milestones established confidence for covered build/test/documentation paths, including parser/scaler/data/loss/gradient checks, validation review, determinism/reproducibility audits, output hygiene, and CLI robustness smoke tests.
+- Post-handoff custom agent added for next phase: `.github/agents/model-improvement.agent.md`.
+
+Latest full-suite verification commands:
+```bash
+cd /home/caidenmarley/stock-bot
+cmake --build build --target run_tests
+ctest --test-dir build --output-on-failure
+```
+
+Latest documented full-suite result:
+- `ctest --test-dir build --output-on-failure`: **20/20 tests passed**
+
+Boundary statement:
+- This does **not** prove profitability.
+- This does **not** prove exhaustive ML correctness.
+- This does **not** prove exhaustive leakage absence across all possible runtime/data scenarios.
+
+Next phase:
+- Project focus now transitions from recovery to model improvement, research, and optimization.
+- Future changes should remain incremental, validation-integrity-first, and test-backed.
+
 ---
 
 ## Summary
@@ -1743,6 +1769,7 @@ cd /home/caidenmarley/stock-bot && git status --short
 25. ✅ Implement Dense deterministic initialization API (Milestone 13O) and add focused coverage (`dense_seed_test`) – **COMPLETE (July 5, 2026)**
 26. ✅ Trainer/main seed plumbing for broader production-path deterministic initialization claims (Milestone 13P) – **COMPLETE (July 5, 2026)**
 27. ✅ Invalid CLI argument handling smoke coverage (Milestone 13Q) – **COMPLETE (July 5, 2026)**
-28. Final recovery-summary consolidation and decision on next development phase (stability hardening vs model improvement) – **Next step**
+28. ✅ Final recovery-summary consolidation and handoff to model-improvement/research phase – **COMPLETE (July 5, 2026)**
+29. Begin incremental model-improvement/research experiments under existing safety and validation constraints – **Next step**
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.

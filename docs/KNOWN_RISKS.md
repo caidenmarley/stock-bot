@@ -1,5 +1,10 @@
 # KNOWN_RISKS.md
 
+## Post-Recovery Handoff Status
+
+- Recovery phase is complete through Milestone 13Q for covered checks.
+- Remaining items below are active risks/limits for the next model-improvement/research phase.
+
 ## Time-Series and Validation Risks
 
 - Time-series leakage risk is reduced by Milestone 12 checks plus Milestone 13G integration-path checks, but not exhaustively eliminated.
@@ -19,6 +24,8 @@
 ## Metrics and Evaluation Risks
 
 - Trading-style metrics (Sharpe/PnL/turnover) are useful diagnostics but are not proof of profitability.
+- Real-market predictive validity remains unproven.
+- Profitability remains unproven.
 - Cost/slippage realism remains limited.
 
 ## Workflow and Artifact Risks

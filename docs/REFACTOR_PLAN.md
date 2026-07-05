@@ -7,6 +7,35 @@ It does not assert that all listed refactors are mandatory, and it is not proof 
 
 Each task should be executed in a small, reviewable, separate commit/branch with focused validation.
 
+## 1.1 Recovery Status Handoff
+
+- Recovery-phase work is complete through Milestone 13Q.
+- Recovery completion means the project has build/test/documentation confidence for covered paths, not exhaustive correctness or profitability proof.
+- Recovery milestones 2-13Q are now treated as completed baseline work.
+- Planning focus moves to incremental model-improvement/research tasks.
+
+## 1.2 Completed Recovery Track (Milestones 2-13Q)
+
+- Build and run verification completed.
+- Parser, scaler, stock-data, loss/metrics, dense/lstm gradient/order, and validation tests completed for covered paths.
+- Integration, reproducibility, determinism, output-path hygiene, AdaBelief, trainer behavior, CLI smoke, hyperparameter-search hygiene, Dense seed path, Trainer/main seed plumbing, and invalid CLI-argument smoke coverage completed.
+- Milestone 13Q marks the end of the recovery track.
+
+## 1.3 Next-Phase Candidate Work (Model Improvement / Research)
+
+Use small, test-backed experiments; avoid one large rewrite.
+
+Agent routing note:
+- Future model-improvement tasks should use `.github/agents/model-improvement.agent.md` rather than the recovery agent.
+
+- target/label design review
+- feature engineering
+- walk-forward validation improvement
+- training/evaluation experiment tracking
+- transaction-cost/slippage realism
+- model architecture improvements
+- later sentiment/text-source model planning
+
 ## 2. Refactor Priorities
 
 ### Safety / Correctness
