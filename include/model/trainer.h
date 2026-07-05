@@ -6,6 +6,8 @@
 #include "model/lstm.h"
 #include "inputs/stock_data.h"
 #include <Eigen/Dense>
+#include <cstdint>
+#include <optional>
 #include <string>
 
 struct TrainingResult{
@@ -19,7 +21,8 @@ public:
     Trainer(int numFeatures, int hiddenSize, int sequenceLength, int batchSize, double learningRate, double delta,
         size_t windowSize, double maxNorm, double decayFactor, double minLR, int lrDecayMaxTries,
         const std::vector<PriceData>& rawTrainingData, const std::vector<PriceData>& rawValidationData,
-        const std::string& resultsFilePath = "");
+        const std::string& resultsFilePath = "",
+        std::optional<uint32_t> denseInitSeed = std::nullopt);
     TrainingResult run(const int epochs, double stoppingToleranceLoss, int maxEpochsWithNoImprovement);
 private:
     LSTMCell lstm;

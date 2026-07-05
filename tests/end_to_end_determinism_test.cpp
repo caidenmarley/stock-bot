@@ -86,13 +86,6 @@ RollingWindowScaler preloadedValidationScaler(const std::vector<PriceData>& trai
     return scaler;
 }
 
-void setDeterministicDense(Dense& dense) {
-    for (int i = 0; i < dense.W.size(); ++i) {
-        dense.W(i) = 0.015 * std::cos(0.31 * static_cast<double>(i + 1));
-    }
-    dense.b = 0.0025;
-}
-
 struct DeterminismRunResult {
     Eigen::VectorXd predsBefore;
     double lossBefore;
@@ -147,8 +140,7 @@ DeterminismRunResult runOneDeterministicPath(uint32_t lstmSeed) {
 
     LSTMCell::setGlobalInitSeed(lstmSeed);
     LSTMCell lstm(numFeatures, hiddenSize, sequenceLength);
-    Dense dense(hiddenSize);
-    setDeterministicDense(dense); // Dense has no explicit seed API in production code.
+    Dense dense(hiddenSize, /*initSeed=*/424242u);
 
     HuberLossFunction huber(1.0);
 

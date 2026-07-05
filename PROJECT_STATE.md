@@ -1514,13 +1514,108 @@ cd /home/caidenmarley/stock-bot && git status --short
 - Dense seeding/API design direction is now documented and bounded for a small future implementation task.
 - Determinism is **not** solved yet; this milestone is design-only.
 
+### **Milestone 13O: Optional Deterministic Dense Initialization** ✅ COMPLETE (July 5, 2026)
+
+**Scope**: Implement optional deterministic Dense initialization with minimal API disruption and focused coverage, without changing Dense math or training semantics.
+
+**Files Changed**:
+- `include/model/dense.h` (added optional seeded constructor path while preserving existing constructor behavior)
+- `tests/dense_seed_test.cpp` (NEW focused Dense seed behavior tests)
+- `tests/end_to_end_determinism_test.cpp` (small adaptation to use seeded Dense constructor for deterministic path setup)
+- `CMakeLists.txt` (added `dense_seed_test` target, CTest registration, and `run_tests` dependency)
+- `docs/BUILD.md` (added `dense_seed_test` build/run entries)
+- `docs/ML_CORRECTNESS.md` (updated Dense determinism status to implemented + covered scope)
+- `docs/KNOWN_RISKS.md` (reduced Dense seed API risk wording; retained broader determinism limits)
+- `docs/REFACTOR_PLAN.md` (marked Dense optional seed implementation complete; updated next likely follow-up)
+- `PROJECT_STATE.md` (this milestone note)
+
+**Dense API change (minimal, default-preserving)**:
+- Existing constructor remains unchanged:
+  - `Dense(int hiddenSize)`
+- Added optional seeded constructor:
+  - `Dense(int hiddenSize, std::optional<uint32_t> initSeed)`
+
+**Behavior guarantees from this milestone**:
+1. Unseeded constructor path remains available and continues to initialize as before for existing call sites.
+2. Same seed + same dimensions produces identical Dense initial `W` and `b` in covered tests.
+3. Different seeds produce different Dense `W` in covered tests.
+4. Seeded Dense forward is repeatable for same input in covered tests.
+5. Dense forward/backward/gradient accumulation math remains unchanged.
+
+**Commands Used**:
+```bash
+cd /home/caidenmarley/stock-bot && cmake --build build --target dense_seed_test
+cd /home/caidenmarley/stock-bot && ./build/dense_seed_test
+cd /home/caidenmarley/stock-bot && cmake --build build --target run_tests
+cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
+cd /home/caidenmarley/stock-bot && git status --short
+```
+
+**Results**:
+- `./build/dense_seed_test`: ✅ **4/4 PASSED**
+- `ctest --test-dir build --output-on-failure`: ✅ **18/18 tests passed**
+
+**Milestone 13O Conclusion**:
+- Dense now has optional deterministic initialization support for covered use cases.
+- Full end-to-end determinism is still not proven; Trainer/main seed plumbing remains only partially wired.
+
+### **Milestone 13P: Trainer/Main Seed Plumbing for Deterministic Initialization** ✅ COMPLETE (July 5, 2026)
+
+**Scope**: Small seed-plumbing improvement to apply existing deterministic initialization paths (LSTM + Dense) more consistently through main/Trainer path, without changing training math.
+
+**Files Changed**:
+- `include/model/trainer.h` (added optional Dense init seed parameter to Trainer constructor)
+- `src/model/trainer.cpp` (wired optional Dense init seed into `outputLayer` construction)
+- `main.cpp` (plumbed `--seed` into Trainer Dense init seed path while preserving unseeded default behavior)
+- `tests/seed_plumbing_test.cpp` (NEW focused executable-level seed plumbing test)
+- `tests/end_to_end_determinism_test.cpp` (small adaptation using seeded Dense constructor)
+- `CMakeLists.txt` (added `seed_plumbing_test` target, CTest registration, and `run_tests` dependency)
+- `docs/BUILD.md` (added seed plumbing test build/run target)
+- `docs/ML_CORRECTNESS.md` (updated determinism/reproducibility wording for seed-plumbing coverage)
+- `docs/KNOWN_RISKS.md` (reduced seed-plumbing risk wording for covered behavior)
+- `docs/REFACTOR_PLAN.md` (marked seed plumbing follow-up complete; updated next likely follow-up)
+- `PROJECT_STATE.md` (this milestone note)
+
+**Seed behavior before**:
+1. `--seed` in `main.cpp` controlled LSTM initialization via `LSTMCell::setGlobalInitSeed(...)`.
+2. Dense initialization in Trainer path was not wired to CLI seed.
+3. Trainer shuffle RNG remained internal static thread-local (`std::mt19937(42)`) and not externally controlled by CLI seed.
+
+**Seed behavior after**:
+1. `--seed` continues to control LSTM initialization.
+2. `--seed` now also controls Dense initialization in Trainer path through optional Dense seed constructor.
+3. No-seed path preserves default behavior (Dense remains unseeded default constructor path).
+4. Trainer shuffle RNG behavior remains unchanged and still not wired to CLI seed.
+
+**Focused test coverage (`seed_plumbing_test`)**:
+1. Runs short CLI executions with same explicit seed and verifies identical `[SUMMARY]` lines in covered configuration.
+2. Verifies unseeded short CLI run still executes successfully.
+3. Avoids brittle full-output comparisons and long training runs.
+
+**Commands Used**:
+```bash
+cd /home/caidenmarley/stock-bot && cmake --build build --target seed_plumbing_test
+cd /home/caidenmarley/stock-bot && ./build/seed_plumbing_test
+cd /home/caidenmarley/stock-bot && cmake --build build --target run_tests
+cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
+cd /home/caidenmarley/stock-bot && git status --short
+```
+
+**Results**:
+- `./build/seed_plumbing_test`: ✅ **1/1 PASSED**
+- `ctest --test-dir build --output-on-failure`: ✅ **19/19 tests passed**
+
+**Milestone 13P Conclusion**:
+- Main/Trainer seed plumbing is cleaner and more complete for deterministic model initialization in covered paths.
+- Full executable-level determinism is still not guaranteed due remaining uncontrolled paths (notably Trainer shuffle seed control).
+
 ---
 
 ## Summary
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–13N Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, end-to-end determinism audit, results-file hygiene improvements, focused AdaBelief optimizer coverage, focused Trainer-level behavior coverage, executable CLI smoke coverage, hyperparameter-search cleanup/audit, and Dense seeding/API design audit are complete ✅
+  - **Milestone 2–13P Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, end-to-end determinism audit, results-file hygiene improvements, focused AdaBelief optimizer coverage, focused Trainer-level behavior coverage, executable CLI smoke coverage, hyperparameter-search cleanup/audit, Dense seeding/API design audit, optional Dense deterministic initialization implementation, and Trainer/main seed plumbing are complete ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -1546,7 +1641,9 @@ cd /home/caidenmarley/stock-bot && git status --short
     - Milestone 13L: CLI smoke coverage completed (`cli_smoke_test`)
     - Milestone 13M: Hyperparameter-search cleanup/audit completed (`hyperparam_search_test`)
     - Milestone 13N: Dense seeding/API design audit completed (docs only; implementation pending)
-  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, `end_to_end_determinism_test`, `results_file_hygiene_test`, `adabelief_test`, `trainer_behavior_test`, `cli_smoke_test`, and `hyperparam_search_test`
+    - Milestone 13O: Dense optional seed implementation completed (`dense_seed_test`)
+    - Milestone 13P: Trainer/main seed plumbing completed (`seed_plumbing_test`)
+  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `dense_seed_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, `end_to_end_determinism_test`, `results_file_hygiene_test`, `adabelief_test`, `trainer_behavior_test`, `cli_smoke_test`, `hyperparam_search_test`, and `seed_plumbing_test`
 - LSTM backward/BPTT now has broader deterministic numerical verification across multiple configurations; coverage is improved but not exhaustive
 - Integration-level validation coverage is improved for one deterministic cross-component path, but still not exhaustive
 - Determinism coverage now includes controlled repeated-run path checks, but full executable-level determinism remains unverified
@@ -1555,7 +1652,8 @@ cd /home/caidenmarley/stock-bot && git status --short
 - Trainer-level behavior now has focused black-box coverage for tiny-run coordination and output hygiene, but internal parameter-transition assertions are still limited by API visibility
 - CLI smoke coverage now verifies short real-executable runs and output-flag hygiene (`--no-results`/safe `--results-file`) for covered commands, but broad CLI-option behavior remains unverified
 - Hyperparameter search now has safe default output hygiene and explicit randomSearch unavailability, but search flow remains outside main runtime integration
-- Dense deterministic initialization direction is now documented (Milestone 13N), but production Dense seed API is still pending implementation
+- Dense now supports optional deterministic initialization (Milestone 13O), but full production same-seed determinism still depends on broader seed plumbing and control-path coverage
+- Main/Trainer seed plumbing now applies explicit seed to both LSTM and Dense initialization in covered CLI path, but trainer shuffle seed control remains fixed/internal
 
 **Main Risks**: 
 - LSTM gradient verification is broader than before but still not exhaustive, plus residual validation leakage risk (reduced by Milestone 12 but not exhaustively eliminated)
@@ -1587,6 +1685,8 @@ cd /home/caidenmarley/stock-bot && git status --short
 22. ✅ CLI-level smoke coverage for output flags (`--results-file` / `--no-results`) and executable-path output hygiene checks (Milestone 13L) – **COMPLETE (July 5, 2026)**
 23. ✅ Hyperparameter-search output-path cleanup and API-clarity audit (Milestone 13M) – **COMPLETE (July 5, 2026)**
 24. ✅ Dense initialization seeding/API design audit for stronger end-to-end reproducibility controls (Milestone 13N, docs-only) – **COMPLETE (July 5, 2026)**
-25. Implement Dense deterministic initialization API (preferred: optional constructor seed parameter with default-preserving behavior) and add focused reproducibility coverage – **Next step**
+25. ✅ Implement Dense deterministic initialization API (Milestone 13O) and add focused coverage (`dense_seed_test`) – **COMPLETE (July 5, 2026)**
+26. ✅ Trainer/main seed plumbing for broader production-path deterministic initialization claims (Milestone 13P) – **COMPLETE (July 5, 2026)**
+27. Invalid CLI argument handling coverage (error-path behavior) or final recovery-summary consolidation – **Next step**
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.

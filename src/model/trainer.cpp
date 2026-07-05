@@ -13,8 +13,10 @@
 Trainer::Trainer(int numFeatures, int hiddenSize, int sequenceLength, int batchSize, double learningRate, double delta,
 size_t windowSize, double maxNorm, double decayFactor, double minLR, int lrDecayMaxTries,
 const std::vector<PriceData>& rawTrainingData, const std::vector<PriceData>& rawValidationData,
-const std::string& resultsFilePath): 
-    lstm(numFeatures, hiddenSize, sequenceLength), outputLayer(hiddenSize), 
+const std::string& resultsFilePath,
+std::optional<uint32_t> denseInitSeed): 
+    lstm(numFeatures, hiddenSize, sequenceLength),
+    outputLayer(hiddenSize, denseInitSeed), 
     optimiser(lstm.getParameterCount(), learningRate),  huberLoss(delta),
     sequenceLength(sequenceLength), batchSize(batchSize), learningRate(learningRate), windowSize(windowSize), 
     maxNorm(maxNorm), decayFactor(decayFactor), minLR(minLR), lrDecayMaxTries(lrDecayMaxTries),

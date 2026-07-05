@@ -35,6 +35,7 @@ cmake --build . --target rolling_window_scaler_test
 cmake --build . --target stock_data_test
 cmake --build . --target loss_metrics_test
 cmake --build . --target dense_gradient_test
+cmake --build . --target dense_seed_test
 cmake --build . --target lstm_parameter_order_test
 cmake --build . --target lstm_gradient_test
 cmake --build . --target time_series_validation_test
@@ -45,6 +46,7 @@ cmake --build . --target adabelief_test
 cmake --build . --target trainer_behavior_test
 cmake --build . --target cli_smoke_test
 cmake --build . --target hyperparam_search_test
+cmake --build . --target seed_plumbing_test
 ```
 
 Build and run all registered tests in one command:
@@ -67,6 +69,7 @@ cd /home/caidenmarley/stock-bot
 ./build/stock_data_test
 ./build/loss_metrics_test
 ./build/dense_gradient_test
+./build/dense_seed_test
 ./build/lstm_parameter_order_test
 ./build/lstm_gradient_test
 ./build/time_series_validation_test
@@ -77,6 +80,7 @@ cd /home/caidenmarley/stock-bot
 ./build/trainer_behavior_test
 ./build/cli_smoke_test
 ./build/hyperparam_search_test
+./build/seed_plumbing_test
 
 # safe short stock_bot CLI smoke runs
 ./build/stock_bot --epochs 1 --seed 0 --early-stop-patience 1 --no-results

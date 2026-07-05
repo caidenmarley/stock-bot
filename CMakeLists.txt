@@ -36,6 +36,8 @@ add_executable(stock_data_test tests/stock_data_test.cpp ${SRC_FILES})
 add_executable(loss_metrics_test tests/loss_metrics_test.cpp ${SRC_FILES})
 # create dense_gradient_test exe, cmake --build build --target dense_gradient_test
 add_executable(dense_gradient_test tests/dense_gradient_test.cpp ${SRC_FILES})
+# create dense_seed_test exe, cmake --build build --target dense_seed_test
+add_executable(dense_seed_test tests/dense_seed_test.cpp ${SRC_FILES})
 # create lstm_parameter_order_test exe, cmake --build build --target lstm_parameter_order_test
 add_executable(lstm_parameter_order_test tests/lstm_parameter_order_test.cpp ${SRC_FILES})
 # create lstm_gradient_test exe, cmake --build build --target lstm_gradient_test
@@ -59,6 +61,9 @@ add_executable(cli_smoke_test tests/cli_smoke_test.cpp ${SRC_FILES})
 add_dependencies(cli_smoke_test stock_bot)
 # create hyperparam_search_test exe, cmake --build build --target hyperparam_search_test
 add_executable(hyperparam_search_test tests/hyperparam_search_test.cpp ${SRC_FILES})
+# create seed_plumbing_test exe, cmake --build build --target seed_plumbing_test
+add_executable(seed_plumbing_test tests/seed_plumbing_test.cpp ${SRC_FILES})
+add_dependencies(seed_plumbing_test stock_bot)
 
 add_test(NAME testbed COMMAND testbed)
 add_test(NAME parser_test COMMAND parser_test)
@@ -66,6 +71,7 @@ add_test(NAME rolling_window_scaler_test COMMAND rolling_window_scaler_test)
 add_test(NAME stock_data_test COMMAND stock_data_test)
 add_test(NAME loss_metrics_test COMMAND loss_metrics_test)
 add_test(NAME dense_gradient_test COMMAND dense_gradient_test)
+add_test(NAME dense_seed_test COMMAND dense_seed_test)
 add_test(NAME lstm_parameter_order_test COMMAND lstm_parameter_order_test)
 add_test(NAME lstm_gradient_test COMMAND lstm_gradient_test)
 add_test(NAME time_series_validation_test COMMAND time_series_validation_test)
@@ -77,6 +83,7 @@ add_test(NAME adabelief_test COMMAND adabelief_test)
 add_test(NAME trainer_behavior_test COMMAND trainer_behavior_test)
 add_test(NAME cli_smoke_test COMMAND cli_smoke_test)
 add_test(NAME hyperparam_search_test COMMAND hyperparam_search_test)
+add_test(NAME seed_plumbing_test COMMAND seed_plumbing_test)
 
 add_custom_target(run_tests
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
@@ -87,6 +94,7 @@ add_custom_target(run_tests
         stock_data_test
         loss_metrics_test
         dense_gradient_test
+        dense_seed_test
         lstm_parameter_order_test
         lstm_gradient_test
         time_series_validation_test
@@ -98,4 +106,5 @@ add_custom_target(run_tests
         trainer_behavior_test
         cli_smoke_test
         hyperparam_search_test
+        seed_plumbing_test
 )

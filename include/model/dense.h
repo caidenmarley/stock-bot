@@ -1,6 +1,9 @@
 #pragma once
 #include <Eigen/Dense>
 #include <cassert>
+#include <cstdint>
+#include <optional>
+#include <random>
 
 struct Dense {
     Eigen::RowVectorXd W;  // [1×hiddenSize] weight
@@ -18,6 +21,20 @@ struct Dense {
         b(0.0),
         dW(Eigen::RowVectorXd::Zero(hiddenSize)),
         db(0.0) {}
+
+        /**
+         * Optional deterministic initialization path for reproducibility-sensitive runs.
+         * If no seed is provided, behavior should match the default constructor behavior.
+         *
+         * @param hiddenSize the size of the hidden layer
+         * @param initSeed optional RNG seed for deterministic initial weights
+         */
+        Dense(int hiddenSize, std::optional<uint32_t> initSeed)
+            : W(initSeed ? makeSeededWeights(hiddenSize, *initSeed)
+                                     : (Eigen::RowVectorXd::Random(hiddenSize) * 0.01)),
+                b(0.0),
+                dW(Eigen::RowVectorXd::Zero(hiddenSize)),
+                db(0.0) {}
 
     /**
      * Linear forward pass y = Wh + b
@@ -51,5 +68,18 @@ struct Dense {
     void zeroGrad() {
         dW.setZero();
         db = 0.0;
+    }
+
+private:
+    static Eigen::RowVectorXd makeSeededWeights(int hiddenSize, uint32_t seed) {
+        Eigen::RowVectorXd out(hiddenSize);
+        std::mt19937 rng(seed);
+        std::uniform_real_distribution<double> dist(-1.0, 1.0);
+
+        for (int i = 0; i < hiddenSize; ++i) {
+            out(i) = dist(rng) * 0.01;
+        }
+
+        return out;
     }
 };

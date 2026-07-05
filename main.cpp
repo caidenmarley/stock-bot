@@ -7,6 +7,7 @@
 #include "model/trainer.h"
 #include "search/hyperparam_search.h"
 #include <iostream>
+#include <optional>
 #include <vector>
 #include <iomanip>
 
@@ -27,7 +28,8 @@ static TrainingResult runFold(
     int epochs,
     double stoppingToleranceLoss,
     int maxEpochsWithNoImprovement,
-    const std::string& trainerResultsPath
+    const std::string& trainerResultsPath,
+    std::optional<uint32_t> denseInitSeed
 ){
     std::vector<PriceData> trainingData(rawData.begin(), rawData.begin() + splitStart);
     std::vector<PriceData> validationData(rawData.begin() + splitStart, rawData.end());
@@ -36,7 +38,8 @@ static TrainingResult runFold(
         numFeatures, hiddenSize, sequenceLength, batchSize, learningRate, delta,
         windowSize, maxNorm, decayFactor, minLR, lrDecayMaxTries, 
         trainingData, validationData,
-        trainerResultsPath
+        trainerResultsPath,
+        denseInitSeed
     );
 
     return trainer.run(epochs, stoppingToleranceLoss, maxEpochsWithNoImprovement);
@@ -109,6 +112,9 @@ int main(int argc, char* argv[]) {
             LSTMCell::setGlobalInitSeed(seed);
         }
 
+        const std::optional<uint32_t> denseInitSeed =
+            givenSeed ? std::optional<uint32_t>(static_cast<uint32_t>(seed)) : std::nullopt;
+
         const std::string activeTrainerResultsPath = enableTrainerResults ? trainerResultsPath : "";
 
         // ---Load Data From CSV--
@@ -141,7 +147,8 @@ int main(int argc, char* argv[]) {
                 sequenceLength, batchSize, learningRate, delta,
                 windowSize, maxNorm, decayFactor, minLR, lrDecayMaxTries,
                 epochs, stoppingToleranceLoss, maxEpochsWithNoImprovement,
-                activeTrainerResultsPath
+                activeTrainerResultsPath,
+                denseInitSeed
             );
 
             foldResults.push_back(result);

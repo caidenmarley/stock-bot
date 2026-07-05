@@ -2,12 +2,13 @@
 
 ## Current Validation and Test Coverage
 
-The following areas have dedicated coverage from milestones 4-13:
+The following areas have dedicated coverage from milestones 4-13O:
 - Parser behavior (`parser_test`)
 - Rolling scaler behavior (`rolling_window_scaler_test`)
 - StockData batching and target alignment basics (`stock_data_test`)
 - Huber loss and metrics formulas (`loss_metrics_test`)
 - Dense gradients via finite differences (`dense_gradient_test`)
+- Dense optional deterministic initialization behavior (`dense_seed_test`)
 - LSTM parameter ordering/vector consistency (`lstm_parameter_order_test`)
 - LSTM multi-case deterministic BPTT finite-difference gradient checks (`lstm_gradient_test`)
 - Time-series validation checks (`time_series_validation_test`)
@@ -90,7 +91,9 @@ What this does not prove yet:
 - Full end-to-end `stock_bot` run determinism across process runs.
 - Determinism of all randomness across the entire training stack.
 
-In particular, current seeding in `main.cpp` is wired to LSTM initialization, while other components (such as Dense initialization path) are not explicitly tied to the same seed path in the current implementation.
+In particular, current seeding in `main.cpp` is wired to LSTM initialization and now also into Trainer Dense initialization path when `--seed` is provided.
+
+Dense now supports optional deterministic initialization via constructor seed parameter, but Trainer/main seed plumbing is not yet fully wired for broad production same-seed determinism claims.
 
 ## End-to-End Determinism Audit (Milestone 13H)
 
@@ -100,7 +103,7 @@ Milestone 13H adds a deterministic audit test for the strongest currently contro
 - Rolling scaling and `StockData` construction for train and validation paths
 - Deterministic `nextBatchShuffled` behavior under fixed explicit order
 - LSTM initialization controlled by `LSTMCell::setGlobalInitSeed(...)`
-- Dense weights/bias explicitly overridden to deterministic values in test scope
+- Dense initialized through optional seeded constructor in test scope
 - One tiny deterministic training-style update (Huber backward + Dense backward + LSTM backward + AdaBelief/SGD update)
 - Equality checks before and after update (predictions, losses, and updated parameters)
 
@@ -109,9 +112,28 @@ Audit result for covered path: passed.
 Important boundary conditions:
 
 - This does not prove full executable-level determinism for `stock_bot`.
-- Dense does not currently expose a production seed API, so deterministic Dense initialization is test-controlled by explicit parameter override.
+- Dense now exposes optional deterministic initialization through constructor seed parameter.
 - `Trainer::run` uses an internal static thread-local shuffle RNG seeded to a fixed value and not wired to CLI seed, limiting externally controlled same-seed reproducibility claims for training-order behavior.
 - Trainer writes `tests/results.csv`, so trainer-level repeated-run checks include file side effects unless isolated.
+
+## Trainer/Main Seed Plumbing Coverage (Milestone 13P)
+
+Milestone 13P wires available deterministic initialization paths more cleanly through production entry points:
+
+- `main.cpp --seed` now controls:
+	- LSTM initialization via existing `LSTMCell::setGlobalInitSeed(...)`
+	- Dense initialization in Trainer path via optional Dense constructor seed parameter
+- Default behavior is preserved when no seed is supplied.
+
+Focused covered behavior:
+
+- `seed_plumbing_test` runs short CLI executions and verifies same-seed runs produce identical `[SUMMARY]` output in covered configuration.
+- Unseeded CLI short run still constructs/runs successfully.
+
+Important limit retained:
+
+- Trainer shuffle ordering still uses internal static thread-local RNG (`std::mt19937(42)`) not externally controlled by CLI seed.
+- Full executable-level determinism for all runtime conditions remains unproven.
 
 ## Dense Seeding/API Design Audit (Milestone 13N)
 
@@ -146,6 +168,23 @@ Recommended direction for a future implementation milestone:
 	- Better testability and cleaner Trainer/main propagation of seed values.
 	- Avoids adding new hidden global state.
 	- Keeps room for future alignment with LSTM seeding docs without forcing global seeding.
+
+## Dense Optional Seed Implementation Coverage (Milestone 13O)
+
+Milestone 13O implements the preferred Dense seed design with minimal API disruption:
+
+- Dense now supports `Dense(hiddenSize, std::optional<uint32_t> initSeed)`.
+- Existing `Dense(hiddenSize)` behavior remains available and unchanged for call sites that do not provide a seed.
+- Dense forward/backward/gradient accumulation math is unchanged.
+
+Focused coverage added in `dense_seed_test`:
+
+- same seed + same dimensions -> identical initial `W` and `b`
+- different seeds -> different initial `W` in tested case
+- unseeded constructor remains valid (shape and zero-bias/grad init checks)
+- seeded Dense forward is repeatable for same input
+
+This improves reproducibility control for covered Dense initialization paths, but does not alone prove full executable-level determinism.
 
 ## AdaBelief Coverage (Milestone 13J)
 
