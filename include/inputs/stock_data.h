@@ -6,6 +6,15 @@
 #include <Eigen/Dense>
 #include <unsupported/Eigen/CXX11/Tensor>
 
+namespace stock_features {
+constexpr int kFeatureCount = 13;
+
+/**
+ * Builds one leakage-safe raw feature row for dayIndex using only rows <= dayIndex.
+ */
+std::vector<double> buildRawFeatureVector(const std::vector<PriceData>& rawData, int dayIndex);
+}
+
 /**
  * Class that converts raw PriceData structs into tensors to be used in the model
  */
@@ -77,7 +86,7 @@ class StockData {
 
   private:
     int sequenceLength;  // days per sequence window
-    int numFeatures;   // feature count per day (6)
+    int numFeatures;   // feature count per day
     int batchSize;     // sequences per batch
     int numWindows;  // total sliding window sequences
     int positionIndex; // how many sequences have been served

@@ -38,6 +38,18 @@ PriceData makePrice(double close, uint64_t volume) {
     return p;
 }
 
+PriceData makeCustomPrice(double open, double high, double low, double close, double adjClose, uint64_t volume) {
+    PriceData p{};
+    p.open = open;
+    p.high = high;
+    p.low = low;
+    p.close = close;
+    p.adjClose = adjClose;
+    p.volume = volume;
+    p.date = "";
+    return p;
+}
+
 std::vector<PriceData> makeSyntheticData(const std::vector<double>& closes) {
     std::vector<PriceData> out;
     out.reserve(closes.size());
@@ -60,10 +72,11 @@ std::vector<double> expectedTargets(const std::vector<double>& closes, int seque
     return targets;
 }
 
-StockData makeStockData(const std::vector<double>& closes, int sequenceLength, int batchSize) {
+StockData makeStockData(const std::vector<double>& closes, int sequenceLength, int batchSize,
+                        int numFeatures = stock_features::kFeatureCount) {
     const auto raw = makeSyntheticData(closes);
-    RollingWindowScaler scaler(/*windowSize=*/3, /*numFeatures=*/6);
-    return StockData(raw, /*numFeatures=*/6, sequenceLength, batchSize, scaler);
+    RollingWindowScaler scaler(/*windowSize=*/3, static_cast<std::size_t>(numFeatures));
+    return StockData(raw, numFeatures, sequenceLength, batchSize, scaler);
 }
 
 void test_constructor_rejects_too_small_data() {
@@ -198,7 +211,96 @@ void test_input_tensor_shape() {
 
     expectTrue(inputs.dimension(0) == batchSize, "tensor dim0 should be currentBatch");
     expectTrue(inputs.dimension(1) == sequenceLength, "tensor dim1 should be sequenceLength");
-    expectTrue(inputs.dimension(2) == 6, "tensor dim2 should be numFeatures");
+    expectTrue(inputs.dimension(2) == stock_features::kFeatureCount, "tensor dim2 should be numFeatures");
+}
+
+void test_engineered_feature_count_constant_and_raw_vector_size() {
+    expectTrue(stock_features::kFeatureCount == 13, "engineered feature count should be 13");
+
+    const auto raw = makeSyntheticData({10.0, 11.0, 12.0, 13.0});
+    const auto featureRow = stock_features::buildRawFeatureVector(raw, 2);
+    expectTrue(static_cast<int>(featureRow.size()) == stock_features::kFeatureCount,
+               "raw feature row size should match engineered feature count");
+}
+
+void test_original_ohlcv_features_preserved_in_first_six_scaled_slots() {
+    const std::vector<double> closes = {10, 12, 15, 19, 24, 30, 37, 45};
+    const int sequenceLength = 3;
+    const int batchSize = 2;
+
+    StockData legacy = makeStockData(closes, sequenceLength, batchSize, /*numFeatures=*/6);
+    StockData engineered = makeStockData(closes, sequenceLength, batchSize, stock_features::kFeatureCount);
+
+    auto [legacyInputs, legacyTargets] = legacy.nextBatch();
+    auto [engInputs, engTargets] = engineered.nextBatch();
+
+    expectTrue(legacyTargets.size() == engTargets.size(), "legacy and engineered target sizes should match");
+    for (int i = 0; i < legacyTargets.size(); ++i) {
+        expectNear(legacyTargets(i), engTargets(i), "targets should remain identical when adding engineered features");
+    }
+
+    for (int b = 0; b < legacyInputs.dimension(0); ++b) {
+        for (int t = 0; t < legacyInputs.dimension(1); ++t) {
+            for (int f = 0; f < 6; ++f) {
+                expectNear(legacyInputs(b, t, f), engInputs(b, t, f),
+                           "first six scaled features should preserve OHLCV behavior");
+            }
+        }
+    }
+}
+
+void test_engineered_features_expected_values_on_tiny_dataset() {
+    const std::vector<PriceData> raw = {
+        makeCustomPrice(10.0, 11.0, 9.0, 10.0, 10.0, 100),
+        makeCustomPrice(11.0, 12.0, 10.0, 11.0, 11.0, 110),
+        makeCustomPrice(12.0, 13.0, 11.0, 12.0, 12.0, 121),
+        makeCustomPrice(13.0, 15.0, 12.0, 14.0, 14.0, 133),
+    };
+
+    const auto row = stock_features::buildRawFeatureVector(raw, 3);
+    expectTrue(static_cast<int>(row.size()) == 13, "expected 13 engineered features");
+
+    expectNear(row[0], 13.0, "open feature mismatch");
+    expectNear(row[1], 15.0, "high feature mismatch");
+    expectNear(row[2], 12.0, "low feature mismatch");
+    expectNear(row[3], 14.0, "close feature mismatch");
+    expectNear(row[4], 14.0, "adj close feature mismatch");
+    expectNear(row[5], 133.0, "volume feature mismatch");
+
+    expectNear(row[6], (14.0 - 12.0) / 12.0, "close-to-close return mismatch");
+    expectNear(row[7], (14.0 - 13.0) / 13.0, "open-to-close return mismatch");
+    expectNear(row[8], (15.0 - 12.0) / 14.0, "range relative-to-close mismatch");
+    expectNear(row[9], (14.0 - 12.0) / (15.0 - 12.0), "close position in range mismatch");
+    expectNear(row[10], (133.0 - 121.0) / 121.0, "volume change mismatch");
+    expectNear(row[11], (14.0 - 10.0) / 10.0, "3-day momentum mismatch");
+
+    const double r1 = (11.0 - 10.0) / 10.0;
+    const double r2 = (12.0 - 11.0) / 11.0;
+    const double r3 = (14.0 - 12.0) / 12.0;
+    const double mean = (r1 + r2 + r3) / 3.0;
+    const double variance = ((r1 * r1) + (r2 * r2) + (r3 * r3)) / 3.0 - (mean * mean);
+    expectNear(row[12], std::sqrt(variance), "rolling volatility mismatch");
+}
+
+void test_future_row_perturbation_does_not_change_earlier_engineered_feature_rows() {
+    const std::vector<PriceData> base = {
+        makeCustomPrice(10.0, 11.0, 9.0, 10.0, 10.0, 100),
+        makeCustomPrice(11.0, 12.0, 10.0, 11.0, 11.0, 110),
+        makeCustomPrice(12.0, 13.0, 11.0, 12.0, 12.0, 120),
+        makeCustomPrice(13.0, 14.0, 12.0, 13.0, 13.0, 130),
+        makeCustomPrice(14.0, 15.0, 13.0, 14.0, 14.0, 140),
+    };
+
+    auto perturbed = base;
+    perturbed[4] = makeCustomPrice(1400.0, 1500.0, 1300.0, 1400.0, 1400.0, 1400000);
+
+    const auto rowBase = stock_features::buildRawFeatureVector(base, 2);
+    const auto rowPerturbed = stock_features::buildRawFeatureVector(perturbed, 2);
+
+    expectTrue(rowBase.size() == rowPerturbed.size(), "feature-row size mismatch under perturbation");
+    for (std::size_t i = 0; i < rowBase.size(); ++i) {
+        expectNear(rowBase[i], rowPerturbed[i], "future-row perturbation changed earlier engineered feature");
+    }
 }
 
 } // namespace
@@ -214,6 +316,10 @@ int main() {
         {"target alignment formula", test_target_alignment_formula},
         {"nextBatchShuffled order", test_next_batch_shuffled_respects_order},
         {"input tensor shape", test_input_tensor_shape},
+        {"engineered feature count", test_engineered_feature_count_constant_and_raw_vector_size},
+        {"ohlcv preservation in first six features", test_original_ohlcv_features_preserved_in_first_six_scaled_slots},
+        {"engineered feature expected values", test_engineered_features_expected_values_on_tiny_dataset},
+        {"future perturbation no leakage", test_future_row_perturbation_does_not_change_earlier_engineered_feature_rows},
     };
 
     std::size_t passed = 0;

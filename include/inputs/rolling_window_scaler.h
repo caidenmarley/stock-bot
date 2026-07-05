@@ -23,6 +23,12 @@ public:
      */
     void add(const PriceData& data);
     /**
+     * Adds a raw feature vector for one day using the same rolling-stat logic.
+     *
+     * @param values raw per-feature values for the current day; size must match numFeatures
+     */
+    void add(const std::vector<double>& values);
+    /**
      * Returns a vector with the scaled values for the most recent day added to the queue (back of the rawValues queue)
      * scaled through scaled = feature - mean / stdDev, normalising the data based on the data seen so far
      * 

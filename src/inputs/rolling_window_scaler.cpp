@@ -1,5 +1,6 @@
 #include "inputs/rolling_window_scaler.h"
 #include <cmath>
+#include <stdexcept>
 
 // TODO could maybe do some sort of ring buffer with contiguous memory for fewer cache misses
 
@@ -17,6 +18,14 @@ void RollingWindowScaler::add(const PriceData& data){
         data.adjClose,
         static_cast<double>(data.volume)
     };
+
+    add(values);
+}
+
+void RollingWindowScaler::add(const std::vector<double>& values){
+    if(values.size() != numFeatures){
+        throw std::runtime_error("feature vector size does not match scaler numFeatures");
+    }
 
     for(size_t i = 0; i < numFeatures; i++){
         double val = values[i];

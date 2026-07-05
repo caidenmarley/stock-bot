@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <random>
 #include <filesystem>
+#include <stdexcept>
 
 Trainer::Trainer(int numFeatures, int hiddenSize, int sequenceLength, int batchSize, double learningRate, double delta,
 size_t windowSize, double maxNorm, double decayFactor, double minLR, int lrDecayMaxTries,
@@ -43,8 +44,14 @@ std::optional<uint32_t> denseInitSeed):
     const size_t split = rawTrainingData.size(); // length of training data
     const size_t preLoadStart = (split > windowSize) ? (split - windowSize) : 0; // take windowSize worth of data
     for(size_t i = preLoadStart; i < split; ++i){
-        // add windowSize number of data points before the split to the rolling window scalar
-        valScaler.add(rawTrainingData[i]);
+        // Preload validation scaler with the same feature-construction path used by StockData,
+        // using only training rows up to i (no validation/future leakage).
+        std::vector<double> allFeatures = stock_features::buildRawFeatureVector(rawTrainingData, static_cast<int>(i));
+        if (numFeatures > static_cast<int>(allFeatures.size())) {
+            throw std::runtime_error("numFeatures exceeds engineered feature count during validation preloading");
+        }
+        std::vector<double> selectedFeatures(allFeatures.begin(), allFeatures.begin() + numFeatures);
+        valScaler.add(selectedFeatures);
     }
 
     validationData = StockData(

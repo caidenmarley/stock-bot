@@ -4,6 +4,98 @@
 #include <utility>
 #include <cstring>
 #include <cassert>
+#include <cmath>
+
+namespace {
+
+double safeDiv(double numerator, double denominator) {
+    if (std::abs(denominator) <= 1e-12) {
+        return 0.0;
+    }
+    return numerator / denominator;
+}
+
+double closeToCloseReturn(const std::vector<PriceData>& rawData, int dayIndex) {
+    if (dayIndex == 0) {
+        return 0.0;
+    }
+    const double closeToday = rawData[static_cast<std::size_t>(dayIndex)].close;
+    const double closePrev = rawData[static_cast<std::size_t>(dayIndex - 1)].close;
+    return safeDiv(closeToday - closePrev, closePrev);
+}
+
+double rollingMomentum(const std::vector<PriceData>& rawData, int dayIndex) {
+    constexpr int lookback = 3;
+    if (dayIndex < lookback) {
+        return 0.0;
+    }
+    const double closeToday = rawData[static_cast<std::size_t>(dayIndex)].close;
+    const double closePast = rawData[static_cast<std::size_t>(dayIndex - lookback)].close;
+    return safeDiv(closeToday - closePast, closePast);
+}
+
+double rollingVolatility(const std::vector<PriceData>& rawData, int dayIndex) {
+    constexpr int returnWindow = 3;
+    if (dayIndex == 0) {
+        return 0.0;
+    }
+
+    const int start = std::max(1, dayIndex - returnWindow + 1);
+    const int count = dayIndex - start + 1;
+    if (count <= 0) {
+        return 0.0;
+    }
+
+    double sum = 0.0;
+    double sumSquares = 0.0;
+    for (int idx = start; idx <= dayIndex; ++idx) {
+        const double ret = closeToCloseReturn(rawData, idx);
+        sum += ret;
+        sumSquares += ret * ret;
+    }
+
+    const double n = static_cast<double>(count);
+    const double mean = sum / n;
+    const double variance = std::max(0.0, (sumSquares / n) - (mean * mean));
+    return std::sqrt(variance);
+}
+
+} // namespace
+
+namespace stock_features {
+
+std::vector<double> buildRawFeatureVector(const std::vector<PriceData>& rawData, int dayIndex) {
+    if (dayIndex < 0 || dayIndex >= static_cast<int>(rawData.size())) {
+        throw std::runtime_error("dayIndex out of range in buildRawFeatureVector");
+    }
+
+    const PriceData& day = rawData[static_cast<std::size_t>(dayIndex)];
+    const double dayRange = day.high - day.low;
+    const double previousVolume =
+        (dayIndex > 0) ? static_cast<double>(rawData[static_cast<std::size_t>(dayIndex - 1)].volume) : 0.0;
+
+    std::vector<double> features;
+    features.reserve(static_cast<std::size_t>(kFeatureCount));
+
+    features.push_back(day.open);                                                   // 1. open
+    features.push_back(day.high);                                                   // 2. high
+    features.push_back(day.low);                                                    // 3. low
+    features.push_back(day.close);                                                  // 4. close
+    features.push_back(day.adjClose);                                               // 5. adjusted close
+    features.push_back(static_cast<double>(day.volume));                            // 6. volume
+    features.push_back(closeToCloseReturn(rawData, dayIndex));                      // 7. close-to-close return
+    features.push_back(safeDiv(day.close - day.open, day.open));                    // 8. open-to-close return
+    features.push_back(safeDiv(day.high - day.low, day.close));                     // 9. intraday range relative to close
+    features.push_back(safeDiv(day.close - day.low, dayRange));                     // 10. close position in day range
+    features.push_back(safeDiv(static_cast<double>(day.volume) - previousVolume,
+                               previousVolume));                                    // 11. volume change vs previous day
+    features.push_back(rollingMomentum(rawData, dayIndex));                         // 12. short rolling momentum
+    features.push_back(rollingVolatility(rawData, dayIndex));                       // 13. short rolling volatility
+
+    return features;
+}
+
+} // namespace stock_features
 
 StockData::StockData(const std::vector<PriceData>& rawData, int numFeatures, int sequenceLength, int batchSize, RollingWindowScaler preLoadedScaler)
         : sequenceLength(sequenceLength),
@@ -36,8 +128,14 @@ StockData::StockData(const std::vector<PriceData>& rawData, int numFeatures, int
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> featureMatrix(numDays, numFeatures);
 
     for (int day = 0; day < numDays; ++day) {
-        // rolling window scaling per day
-        this->scaler.add(rawData[day]);
+        // Build leakage-safe raw engineered features, then scale with rolling context up to this day.
+        const std::vector<double> allFeatures = stock_features::buildRawFeatureVector(rawData, day);
+        if (this->numFeatures > static_cast<int>(allFeatures.size())) {
+            throw std::runtime_error("numFeatures exceeds engineered feature count");
+        }
+
+        std::vector<double> rawFeatures(allFeatures.begin(), allFeatures.begin() + this->numFeatures);
+        this->scaler.add(rawFeatures);
         std::vector<double> scaled = this->scaler.scaledValuesPerDay();
         double* rowPtr = featureMatrix.data() + day * this->numFeatures;
         for(int i = 0; i < this->numFeatures; i++){

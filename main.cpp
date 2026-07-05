@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
         // TrainerParams trainerParams;
 
         // ---HyperParameters---
-        int numFeatures = 6;
+        int numFeatures = stock_features::kFeatureCount;
         int hiddenSize = 64;  // dimension of lstm matrices
         int sequenceLength = 15; // number of days per sequence
         int batchSize = 10; // number of sequences per batch
