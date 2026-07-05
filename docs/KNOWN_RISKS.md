@@ -28,6 +28,7 @@
 - Profitability remains unproven.
 - Cost/slippage realism remains limited.
 - Benchmark helpers now provide cash, buy-and-hold, random/no-skill, and previous-return momentum diagnostics under shared assumptions, but these remain simple baselines and are not exhaustive strategy benchmarks.
+- Model-vs-benchmark comparison helpers currently follow existing metrics conventions and rely on `assert` for mismatched prediction/return lengths rather than user-facing runtime error handling.
 
 ## Workflow and Artifact Risks
 

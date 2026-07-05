@@ -199,6 +199,15 @@ Added benchmark summary evaluation:
 - avgTurnover
 - cumulativeNetReturn
 
+Added model-vs-benchmark comparison helper:
+- fixed row order: model, cash, buy_and_hold, random_noskill, prev_return_momentum
+- shared schema: name, sharpeNet, avgTurnover, cumulativeNetReturn, numObservations
+- model row uses existing threshold-to-position logic and the same PnL/cost path as benchmarks
+
+Current convention note:
+- helper size checks follow existing metrics conventions and rely on assert for prediction/return length mismatch
+- this is acceptable for current internal/testing usage but is not a user-facing runtime error API
+
 Design guardrail retained:
 - benchmark helpers are evaluation utilities only
 - no training behavior, target construction, optimizer, or validation split logic changed

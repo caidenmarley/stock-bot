@@ -128,6 +128,7 @@ struct BenchmarkSummary {
     double sharpeNet;
     double avgTurnover;
     double cumulativeNetReturn;
+    std::size_t numObservations;
 };
 
 /**
@@ -139,6 +140,22 @@ struct BenchmarkSummary {
  * - prev_return_momentum
  */
 std::vector<BenchmarkSummary> evaluateStandardBenchmarks(
+    const std::vector<double>& actualReturns,
+    const ProfitAndLossParams& params,
+    uint32_t randomSeed
+);
+
+/**
+ * Evaluate model predictions and standard benchmarks side-by-side.
+ * Stable output row order:
+ * 1) model
+ * 2) cash
+ * 3) buy_and_hold
+ * 4) random_noskill
+ * 5) prev_return_momentum
+ */
+std::vector<BenchmarkSummary> evaluateModelAndBenchmarks(
+    const std::vector<double>& modelPredictions,
     const std::vector<double>& actualReturns,
     const ProfitAndLossParams& params,
     uint32_t randomSeed

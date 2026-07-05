@@ -121,6 +121,80 @@ void test_benchmark_names_stable() {
     expectTrue(summaries[3].name == "prev_return_momentum", "benchmark name mismatch: prev_return_momentum");
 }
 
+void test_model_and_benchmark_rows_have_stable_order_and_schema() {
+    metrics::ProfitAndLossParams params{0.0, 0.001, 252};
+    const std::vector<double> preds = {0.02, -0.01, 0.03};
+    const std::vector<double> returns = {0.01, -0.02, 0.03};
+
+    const auto rows = metrics::evaluateModelAndBenchmarks(preds, returns, params, 7u);
+    expectTrue(rows.size() == 5, "expected model plus four benchmark rows");
+
+    expectTrue(rows[0].name == "model", "row 0 should be model");
+    expectTrue(rows[1].name == "cash", "row 1 should be cash");
+    expectTrue(rows[2].name == "buy_and_hold", "row 2 should be buy_and_hold");
+    expectTrue(rows[3].name == "random_noskill", "row 3 should be random_noskill");
+    expectTrue(rows[4].name == "prev_return_momentum", "row 4 should be prev_return_momentum");
+
+    for (const auto& row : rows) {
+        expectTrue(row.numObservations == returns.size(), "numObservations schema mismatch");
+    }
+}
+
+void test_model_row_uses_threshold_position_logic() {
+    metrics::ProfitAndLossParams params{0.001, 0.001, 252};
+    const std::vector<double> preds = {0.001, 0.0011, -0.1};
+    const std::vector<double> returns = {0.01, 0.02, 0.03};
+
+    const auto rows = metrics::evaluateModelAndBenchmarks(preds, returns, params, 11u);
+    expectTrue(rows.size() == 5, "expected model plus four benchmark rows");
+
+    // threshold rule is strict > threshold, so positions => [0,1,0]
+    // turnover => [0,1,1], avg = 2/3
+    // net => [0, 0.019, -0.001], cumulative = 0.018
+    expectNear(rows[0].avgTurnover, 2.0 / 3.0, "model avgTurnover should follow threshold position logic");
+    expectNear(rows[0].cumulativeNetReturn, 0.018, "model cumulative net should use same pnl path");
+}
+
+void test_benchmark_rows_match_standard_helper() {
+    metrics::ProfitAndLossParams params{0.0, 0.001, 252};
+    const std::vector<double> preds = {0.2, -0.1, 0.3, -0.4};
+    const std::vector<double> returns = {0.01, -0.02, 0.03, -0.04};
+
+    const auto combo = metrics::evaluateModelAndBenchmarks(preds, returns, params, 123u);
+    const auto base = metrics::evaluateStandardBenchmarks(returns, params, 123u);
+
+    expectTrue(combo.size() == 5, "combo row count mismatch");
+    expectTrue(base.size() == 4, "base row count mismatch");
+
+    for (std::size_t i = 0; i < base.size(); ++i) {
+        const auto& a = combo[i + 1];
+        const auto& b = base[i];
+        expectTrue(a.name == b.name, "benchmark row name mismatch");
+        expectNear(a.sharpeNet, b.sharpeNet, "benchmark sharpe mismatch");
+        expectNear(a.avgTurnover, b.avgTurnover, "benchmark turnover mismatch");
+        expectNear(a.cumulativeNetReturn, b.cumulativeNetReturn, "benchmark cumulative net mismatch");
+        expectTrue(a.numObservations == b.numObservations, "benchmark numObservations mismatch");
+    }
+}
+
+void test_model_and_benchmark_random_reproducibility() {
+    metrics::ProfitAndLossParams params{0.0, 0.001, 252};
+    const std::vector<double> preds = {0.1, -0.2, 0.3, -0.4, 0.5};
+    const std::vector<double> returns = {0.01, -0.02, 0.03, -0.04, 0.05};
+
+    const auto a = metrics::evaluateModelAndBenchmarks(preds, returns, params, 77u);
+    const auto b = metrics::evaluateModelAndBenchmarks(preds, returns, params, 77u);
+
+    expectTrue(a.size() == b.size(), "comparison size mismatch");
+    for (std::size_t i = 0; i < a.size(); ++i) {
+        expectTrue(a[i].name == b[i].name, "comparison name mismatch");
+        expectNear(a[i].sharpeNet, b[i].sharpeNet, "comparison sharpe mismatch");
+        expectNear(a[i].avgTurnover, b[i].avgTurnover, "comparison turnover mismatch");
+        expectNear(a[i].cumulativeNetReturn, b[i].cumulativeNetReturn, "comparison cumulative net mismatch");
+        expectTrue(a[i].numObservations == b[i].numObservations, "comparison observations mismatch");
+    }
+}
+
 } // namespace
 
 int main() {
@@ -132,6 +206,10 @@ int main() {
         {"momentum baseline no leakage", test_momentum_baseline_no_current_day_leakage},
         {"empty and tiny input safety", test_empty_and_tiny_input_safe},
         {"benchmark names stable", test_benchmark_names_stable},
+        {"model+benchmark stable row order", test_model_and_benchmark_rows_have_stable_order_and_schema},
+        {"model row threshold logic", test_model_row_uses_threshold_position_logic},
+        {"benchmark rows match standard helper", test_benchmark_rows_match_standard_helper},
+        {"model+benchmark random reproducibility", test_model_and_benchmark_random_reproducibility},
     };
 
     std::size_t passed = 0;

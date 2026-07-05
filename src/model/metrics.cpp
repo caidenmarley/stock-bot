@@ -147,6 +147,7 @@ static BenchmarkSummary evaluateBenchmarkFromPositions(
     out.sharpeNet = sharpe(daily.netReturn, params.periodsPerYear);
     out.avgTurnover = mean(daily.turnover);
     out.cumulativeNetReturn = std::accumulate(daily.netReturn.begin(), daily.netReturn.end(), 0.0);
+    out.numObservations = actualReturns.size();
     return out;
 }
 
@@ -187,6 +188,38 @@ std::vector<BenchmarkSummary> evaluateStandardBenchmarks(
         actualReturns,
         params
     ));
+
+    return out;
+}
+
+std::vector<BenchmarkSummary> evaluateModelAndBenchmarks(
+    const std::vector<double>& modelPredictions,
+    const std::vector<double>& actualReturns,
+    const ProfitAndLossParams& params,
+    uint32_t randomSeed
+) {
+    assert(modelPredictions.size() == actualReturns.size());
+
+    std::vector<BenchmarkSummary> out;
+    out.reserve(5);
+
+    const std::vector<double> modelPositions = predictionsToPositions(
+        modelPredictions,
+        params.thresholdToEnter
+    );
+    out.push_back(evaluateBenchmarkFromPositions(
+        "model",
+        modelPositions,
+        actualReturns,
+        params
+    ));
+
+    const std::vector<BenchmarkSummary> benchmarks = evaluateStandardBenchmarks(
+        actualReturns,
+        params,
+        randomSeed
+    );
+    out.insert(out.end(), benchmarks.begin(), benchmarks.end());
 
     return out;
 }
