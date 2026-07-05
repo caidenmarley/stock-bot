@@ -182,3 +182,23 @@ Why this is the next smallest step:
 
 The objective is not to maximize one metric on one short window.
 The objective is to improve robust out-of-sample, walk-forward, net-after-cost diagnostics under realistic assumptions, while preserving leakage safety and reproducibility.
+
+## MI-2 Implementation Note (Benchmark Helpers)
+
+A small benchmark evaluation helper is now implemented in the metrics module and covered by focused tests.
+
+Added benchmark helpers:
+- cash baseline positions (always 0.0)
+- buy-and-hold baseline positions (always 1.0)
+- deterministic random/no-skill positions (explicit seed)
+- previous-return momentum positions where position[t] uses return[t-1], never return[t]
+
+Added benchmark summary evaluation:
+- stable benchmark names for tracking
+- sharpeNet after costs
+- avgTurnover
+- cumulativeNetReturn
+
+Design guardrail retained:
+- benchmark helpers are evaluation utilities only
+- no training behavior, target construction, optimizer, or validation split logic changed

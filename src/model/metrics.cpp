@@ -3,6 +3,8 @@
 #include <cassert>
 #include <cmath>
 #include <numeric>
+#include <random>
+#include <string>
 
 
 namespace metrics {
@@ -88,6 +90,104 @@ SharpeAndTurnover calcSharpeAndTurnover(
     SharpeAndTurnover out;
     out.sharpeNet = sharpe(daily.netReturn, params.periodsPerYear);
     out.avgTurnover = mean(daily.turnover);
+    return out;
+}
+
+std::vector<double> cashBaselinePositions(std::size_t length) {
+    return std::vector<double>(length, 0.0);
+}
+
+std::vector<double> buyAndHoldBaselinePositions(std::size_t length) {
+    return std::vector<double>(length, 1.0);
+}
+
+std::vector<double> randomNoSkillBaselinePositions(std::size_t length, uint32_t seed) {
+    std::vector<double> positions;
+    positions.reserve(length);
+
+    std::mt19937 rng(seed);
+    std::uniform_int_distribution<int> dist(0, 1);
+    for (std::size_t i = 0; i < length; ++i) {
+        positions.push_back(static_cast<double>(dist(rng)));
+    }
+
+    return positions;
+}
+
+std::vector<double> previousReturnMomentumPositions(const std::vector<double>& actualReturns) {
+    const std::size_t n = actualReturns.size();
+    std::vector<double> positions(n, 0.0);
+    if (n == 0) {
+        return positions;
+    }
+
+    positions[0] = 0.0;
+    for (std::size_t t = 1; t < n; ++t) {
+        positions[t] = actualReturns[t - 1] > 0.0 ? 1.0 : 0.0;
+    }
+    return positions;
+}
+
+static BenchmarkSummary evaluateBenchmarkFromPositions(
+    const std::string& name,
+    const std::vector<double>& positions,
+    const std::vector<double>& actualReturns,
+    const ProfitAndLossParams& params
+) {
+    assert(positions.size() == actualReturns.size());
+
+    const DailyPnLAndTurnover daily = calcDailyPnLAndTurnover(
+        positions,
+        actualReturns,
+        params.costToChangePos
+    );
+
+    BenchmarkSummary out;
+    out.name = name;
+    out.sharpeNet = sharpe(daily.netReturn, params.periodsPerYear);
+    out.avgTurnover = mean(daily.turnover);
+    out.cumulativeNetReturn = std::accumulate(daily.netReturn.begin(), daily.netReturn.end(), 0.0);
+    return out;
+}
+
+std::vector<BenchmarkSummary> evaluateStandardBenchmarks(
+    const std::vector<double>& actualReturns,
+    const ProfitAndLossParams& params,
+    uint32_t randomSeed
+) {
+    const std::size_t n = actualReturns.size();
+
+    std::vector<BenchmarkSummary> out;
+    out.reserve(4);
+
+    out.push_back(evaluateBenchmarkFromPositions(
+        "cash",
+        cashBaselinePositions(n),
+        actualReturns,
+        params
+    ));
+
+    out.push_back(evaluateBenchmarkFromPositions(
+        "buy_and_hold",
+        buyAndHoldBaselinePositions(n),
+        actualReturns,
+        params
+    ));
+
+    out.push_back(evaluateBenchmarkFromPositions(
+        "random_noskill",
+        randomNoSkillBaselinePositions(n, randomSeed),
+        actualReturns,
+        params
+    ));
+
+    out.push_back(evaluateBenchmarkFromPositions(
+        "prev_return_momentum",
+        previousReturnMomentumPositions(actualReturns),
+        actualReturns,
+        params
+    ));
+
     return out;
 }
 

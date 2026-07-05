@@ -27,6 +27,7 @@
 - Real-market predictive validity remains unproven.
 - Profitability remains unproven.
 - Cost/slippage realism remains limited.
+- Benchmark helpers now provide cash, buy-and-hold, random/no-skill, and previous-return momentum diagnostics under shared assumptions, but these remain simple baselines and are not exhaustive strategy benchmarks.
 
 ## Workflow and Artifact Risks
 

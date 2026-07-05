@@ -34,6 +34,7 @@ cmake --build . --target parser_test
 cmake --build . --target rolling_window_scaler_test
 cmake --build . --target stock_data_test
 cmake --build . --target loss_metrics_test
+cmake --build . --target benchmark_metrics_test
 cmake --build . --target dense_gradient_test
 cmake --build . --target dense_seed_test
 cmake --build . --target lstm_parameter_order_test
@@ -69,6 +70,7 @@ cd /home/caidenmarley/stock-bot
 ./build/rolling_window_scaler_test
 ./build/stock_data_test
 ./build/loss_metrics_test
+./build/benchmark_metrics_test
 ./build/dense_gradient_test
 ./build/dense_seed_test
 ./build/lstm_parameter_order_test

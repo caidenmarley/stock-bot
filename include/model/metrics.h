@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+#include <string>
 #include <vector>
 
 namespace metrics{
@@ -104,5 +107,40 @@ SharpeAndTurnover calcSharpeAndTurnover(
     const std::vector<double>& predictions,
     const std::vector<double>& actualReturns,
     const ProfitAndLossParams& params
+);
+
+/**
+ * Baseline positions for benchmark comparisons.
+ */
+std::vector<double> cashBaselinePositions(std::size_t length);
+std::vector<double> buyAndHoldBaselinePositions(std::size_t length);
+std::vector<double> randomNoSkillBaselinePositions(std::size_t length, uint32_t seed);
+
+/**
+ * Previous-return momentum baseline:
+ * - position[0] is 0.0 (no previous return exists)
+ * - for t > 0: position[t] = 1.0 when actualReturns[t-1] > 0, else 0.0
+ */
+std::vector<double> previousReturnMomentumPositions(const std::vector<double>& actualReturns);
+
+struct BenchmarkSummary {
+    std::string name;
+    double sharpeNet;
+    double avgTurnover;
+    double cumulativeNetReturn;
+};
+
+/**
+ * Evaluate standard benchmark baselines under the same returns and cost assumptions.
+ * Names are stable for experiment tracking:
+ * - cash
+ * - buy_and_hold
+ * - random_noskill
+ * - prev_return_momentum
+ */
+std::vector<BenchmarkSummary> evaluateStandardBenchmarks(
+    const std::vector<double>& actualReturns,
+    const ProfitAndLossParams& params,
+    uint32_t randomSeed
 );
 }

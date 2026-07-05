@@ -34,6 +34,8 @@ add_executable(rolling_window_scaler_test tests/rolling_window_scaler_test.cpp $
 add_executable(stock_data_test tests/stock_data_test.cpp ${SRC_FILES})
 # create loss_metrics_test exe, cmake --build build --target loss_metrics_test
 add_executable(loss_metrics_test tests/loss_metrics_test.cpp ${SRC_FILES})
+# create benchmark_metrics_test exe, cmake --build build --target benchmark_metrics_test
+add_executable(benchmark_metrics_test tests/benchmark_metrics_test.cpp ${SRC_FILES})
 # create dense_gradient_test exe, cmake --build build --target dense_gradient_test
 add_executable(dense_gradient_test tests/dense_gradient_test.cpp ${SRC_FILES})
 # create dense_seed_test exe, cmake --build build --target dense_seed_test
@@ -73,6 +75,7 @@ add_test(NAME parser_test COMMAND parser_test)
 add_test(NAME rolling_window_scaler_test COMMAND rolling_window_scaler_test)
 add_test(NAME stock_data_test COMMAND stock_data_test)
 add_test(NAME loss_metrics_test COMMAND loss_metrics_test)
+add_test(NAME benchmark_metrics_test COMMAND benchmark_metrics_test)
 add_test(NAME dense_gradient_test COMMAND dense_gradient_test)
 add_test(NAME dense_seed_test COMMAND dense_seed_test)
 add_test(NAME lstm_parameter_order_test COMMAND lstm_parameter_order_test)
@@ -97,6 +100,7 @@ add_custom_target(run_tests
         rolling_window_scaler_test
         stock_data_test
         loss_metrics_test
+        benchmark_metrics_test
         dense_gradient_test
         dense_seed_test
         lstm_parameter_order_test

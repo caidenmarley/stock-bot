@@ -1,0 +1,150 @@
+#include "model/metrics.h"
+
+#include <cmath>
+#include <functional>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+namespace {
+
+constexpr double kTol = 1e-9;
+
+void expectTrue(bool cond, const std::string& msg) {
+    if (!cond) {
+        throw std::runtime_error(msg);
+    }
+}
+
+void expectNear(double actual, double expected, const std::string& msg, double tol = kTol) {
+    if (std::abs(actual - expected) > tol) {
+        throw std::runtime_error(msg + " expected=" + std::to_string(expected) + " actual=" + std::to_string(actual));
+    }
+}
+
+void test_cash_baseline_daily_behavior() {
+    const std::vector<double> returns = {0.01, -0.02, 0.03};
+    const auto positions = metrics::cashBaselinePositions(returns.size());
+    const auto pnl = metrics::calcDailyPnLAndTurnover(positions, returns, 0.001);
+
+    expectTrue(positions.size() == returns.size(), "cash positions size mismatch");
+    for (std::size_t i = 0; i < returns.size(); ++i) {
+        expectNear(positions[i], 0.0, "cash position should be flat");
+        expectNear(pnl.grossReturn[i], 0.0, "cash gross return should be zero");
+        expectNear(pnl.turnover[i], 0.0, "cash turnover should be zero");
+        expectNear(pnl.netReturn[i], 0.0, "cash net return should be zero");
+    }
+
+    expectNear(metrics::sharpe(pnl.netReturn, 252), 0.0, "cash sharpe should be neutral");
+}
+
+void test_buy_and_hold_positions() {
+    const auto positions = metrics::buyAndHoldBaselinePositions(5);
+    expectTrue(positions.size() == 5, "buy_and_hold size mismatch");
+    for (double p : positions) {
+        expectNear(p, 1.0, "buy_and_hold should be fully invested");
+    }
+}
+
+void test_transaction_costs_use_existing_pnl_path() {
+    const std::vector<double> returns = {0.01, -0.02, 0.03};
+    metrics::ProfitAndLossParams params{0.0, 0.001, 252};
+
+    const auto summaries = metrics::evaluateStandardBenchmarks(returns, params, 123u);
+    expectTrue(summaries.size() == 4, "expected four benchmark summaries");
+
+    // buy_and_hold: positions [1,1,1], turnover [1,0,0], costs [0.001,0,0]
+    // net: [0.009, -0.02, 0.03], cumulative = 0.019
+    double buyHoldCum = 0.0;
+    bool found = false;
+    for (const auto& s : summaries) {
+        if (s.name == "buy_and_hold") {
+            buyHoldCum = s.cumulativeNetReturn;
+            found = true;
+            break;
+        }
+    }
+    expectTrue(found, "buy_and_hold summary missing");
+    expectNear(buyHoldCum, 0.019, "buy_and_hold cumulative net should include entry cost");
+}
+
+void test_random_baseline_reproducible_for_seed() {
+    const std::size_t n = 32;
+    const auto a = metrics::randomNoSkillBaselinePositions(n, 42u);
+    const auto b = metrics::randomNoSkillBaselinePositions(n, 42u);
+    const auto c = metrics::randomNoSkillBaselinePositions(n, 7u);
+
+    expectTrue(a == b, "random baseline should be reproducible for same seed");
+    expectTrue(a != c, "random baseline should differ for different seed (high probability)");
+}
+
+void test_momentum_baseline_no_current_day_leakage() {
+    const std::vector<double> returns = {0.5, -0.7, 0.2, -0.1};
+    const auto pos = metrics::previousReturnMomentumPositions(returns);
+
+    expectTrue(pos.size() == returns.size(), "momentum positions size mismatch");
+    expectNear(pos[0], 0.0, "position[0] must be flat when no previous return exists");
+
+    for (std::size_t t = 1; t < returns.size(); ++t) {
+        const double expected = returns[t - 1] > 0.0 ? 1.0 : 0.0;
+        expectNear(pos[t], expected, "momentum position must use previous return only");
+    }
+}
+
+void test_empty_and_tiny_input_safe() {
+    metrics::ProfitAndLossParams params{0.0, 0.001, 252};
+
+    const auto empty = metrics::evaluateStandardBenchmarks({}, params, 1u);
+    expectTrue(empty.size() == 4, "empty input should still return all benchmark summaries");
+    for (const auto& s : empty) {
+        expectNear(s.sharpeNet, 0.0, "empty sharpe should be zero");
+        expectNear(s.avgTurnover, 0.0, "empty turnover should be zero");
+        expectNear(s.cumulativeNetReturn, 0.0, "empty cumulative return should be zero");
+    }
+
+    const std::vector<double> tiny = {0.02};
+    const auto one = metrics::evaluateStandardBenchmarks(tiny, params, 5u);
+    expectTrue(one.size() == 4, "tiny input should return all benchmark summaries");
+}
+
+void test_benchmark_names_stable() {
+    metrics::ProfitAndLossParams params{0.0, 0.001, 252};
+    const std::vector<double> returns = {0.01, -0.02};
+
+    const auto summaries = metrics::evaluateStandardBenchmarks(returns, params, 99u);
+    expectTrue(summaries.size() == 4, "expected four benchmark summaries");
+
+    expectTrue(summaries[0].name == "cash", "benchmark name mismatch: cash");
+    expectTrue(summaries[1].name == "buy_and_hold", "benchmark name mismatch: buy_and_hold");
+    expectTrue(summaries[2].name == "random_noskill", "benchmark name mismatch: random_noskill");
+    expectTrue(summaries[3].name == "prev_return_momentum", "benchmark name mismatch: prev_return_momentum");
+}
+
+} // namespace
+
+int main() {
+    const std::vector<std::pair<std::string, std::function<void()>>> tests = {
+        {"cash baseline daily behavior", test_cash_baseline_daily_behavior},
+        {"buy and hold baseline positions", test_buy_and_hold_positions},
+        {"transaction costs through pnl path", test_transaction_costs_use_existing_pnl_path},
+        {"random baseline reproducibility", test_random_baseline_reproducible_for_seed},
+        {"momentum baseline no leakage", test_momentum_baseline_no_current_day_leakage},
+        {"empty and tiny input safety", test_empty_and_tiny_input_safe},
+        {"benchmark names stable", test_benchmark_names_stable},
+    };
+
+    std::size_t passed = 0;
+    for (const auto& [name, fn] : tests) {
+        try {
+            fn();
+            ++passed;
+            std::cout << "[PASS] " << name << "\n";
+        } catch (const std::exception& ex) {
+            std::cout << "[FAIL] " << name << " -> " << ex.what() << "\n";
+        }
+    }
+
+    std::cout << "\nBenchmark metrics tests: " << passed << "/" << tests.size() << " passed\n";
+    return passed == tests.size() ? 0 : 1;
+}
