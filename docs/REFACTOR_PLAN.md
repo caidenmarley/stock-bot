@@ -164,7 +164,8 @@ Reason:
 - Dense initialization seed/API design discussion is now completed in Milestone 13N (design-only docs audit, no code changes).
 - Dense optional deterministic initialization implementation is now completed in Milestone 13O (`include/model/dense.h` + `tests/dense_seed_test.cpp`).
 - Trainer/main seed plumbing pass is now completed in Milestone 13P (`main.cpp`, `trainer.*`, and `tests/seed_plumbing_test.cpp`).
-- Next likely low-risk follow-up: invalid CLI argument handling coverage (error-path behavior for missing/invalid values) or final recovery-summary consolidation.
+- Invalid CLI argument handling smoke coverage is now completed in Milestone 13Q (`main.cpp` + `tests/cli_invalid_args_test.cpp`).
+- Next likely low-risk follow-up: final recovery-summary consolidation and milestone handoff, or shift to model-improvement experiments under current safety constraints.
 
 ### Task: Implement Dense deterministic initialization API (follow-up to Milestone 13N design audit)
 - Motivation: production same-seed reproducibility claims remain limited because Dense has no production seed path.

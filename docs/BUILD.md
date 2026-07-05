@@ -45,6 +45,7 @@ cmake --build . --target results_file_hygiene_test
 cmake --build . --target adabelief_test
 cmake --build . --target trainer_behavior_test
 cmake --build . --target cli_smoke_test
+cmake --build . --target cli_invalid_args_test
 cmake --build . --target hyperparam_search_test
 cmake --build . --target seed_plumbing_test
 ```
@@ -79,12 +80,16 @@ cd /home/caidenmarley/stock-bot
 ./build/adabelief_test
 ./build/trainer_behavior_test
 ./build/cli_smoke_test
+./build/cli_invalid_args_test
 ./build/hyperparam_search_test
 ./build/seed_plumbing_test
 
 # safe short stock_bot CLI smoke runs
 ./build/stock_bot --epochs 1 --seed 0 --early-stop-patience 1 --no-results
 ./build/stock_bot --epochs 1 --seed 0 --early-stop-patience 1 --results-file build/results/cli_smoke_results.csv
+
+# invalid flags/values should fail non-zero
+./build/stock_bot --definitely-invalid-option
 ```
 
 Run the full suite through CTest (recommended):

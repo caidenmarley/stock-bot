@@ -7,6 +7,7 @@
 #include "model/trainer.h"
 #include "search/hyperparam_search.h"
 #include <iostream>
+#include <stdexcept>
 #include <optional>
 #include <vector>
 #include <iomanip>
@@ -74,22 +75,71 @@ int main(int argc, char* argv[]) {
         bool enableTrainerResults = true;
         std::string trainerResultsPath = "build/results/trainer_results.csv";
 
+        auto requireValue = [&](int idx, const std::string& opt) {
+            if (idx + 1 >= argc) {
+                throw std::invalid_argument(opt + " requires a value");
+            }
+        };
+
+        auto parseIntArg = [&](const std::string& raw, const std::string& opt) {
+            try {
+                size_t pos = 0;
+                int value = std::stoi(raw, &pos);
+                if (pos != raw.size()) {
+                    throw std::invalid_argument("");
+                }
+                return value;
+            } catch (...) {
+                throw std::invalid_argument("invalid integer for " + opt + ": " + raw);
+            }
+        };
+
+        auto parseDoubleArg = [&](const std::string& raw, const std::string& opt) {
+            try {
+                size_t pos = 0;
+                double value = std::stod(raw, &pos);
+                if (pos != raw.size()) {
+                    throw std::invalid_argument("");
+                }
+                return value;
+            } catch (...) {
+                throw std::invalid_argument("invalid number for " + opt + ": " + raw);
+            }
+        };
+
         // ---Arg Parsing---
         for(int i = 1; i < argc; ++i) {
             std::string arg = argv[i];
-            if(arg == "--epochs" && i+1 < argc) {
-                epochs = std::stoi(argv[++i]);
-            }else if(arg == "--early-stop-eps" && i+1 < argc) {
-                stoppingToleranceLoss = std::stod(argv[++i]);
-            }else if(arg == "--early-stop-patience" && i+1 < argc) {
-                maxEpochsWithNoImprovement = std::stoi(argv[++i]);
+            if(arg == "--epochs") {
+                requireValue(i, arg);
+                epochs = parseIntArg(argv[++i], arg);
+                if (epochs <= 0) {
+                    throw std::invalid_argument("--epochs must be > 0");
+                }
+            }else if(arg == "--early-stop-eps") {
+                requireValue(i, arg);
+                stoppingToleranceLoss = parseDoubleArg(argv[++i], arg);
+            }else if(arg == "--early-stop-patience") {
+                requireValue(i, arg);
+                maxEpochsWithNoImprovement = parseIntArg(argv[++i], arg);
+                if (maxEpochsWithNoImprovement <= 0) {
+                    throw std::invalid_argument("--early-stop-patience must be > 0");
+                }
             }else if(arg == "--test"){
                 //test = true;
             }else if(arg == "--seed"){
-                seed = std::stoi(argv[++i]);
+                requireValue(i, arg);
+                seed = parseIntArg(argv[++i], arg);
+                if (seed < 0) {
+                    throw std::invalid_argument("--seed must be >= 0");
+                }
                 givenSeed = true;
-            }else if(arg == "--results-file" && i+1 < argc) {
+            }else if(arg == "--results-file") {
+                requireValue(i, arg);
                 trainerResultsPath = argv[++i];
+                if (trainerResultsPath.empty()) {
+                    throw std::invalid_argument("--results-file requires a non-empty path");
+                }
                 enableTrainerResults = true;
             }else if(arg == "--no-results") {
                 enableTrainerResults = false;
@@ -105,6 +155,8 @@ int main(int argc, char* argv[]) {
                   << "  --no-results                   Disable trainer CSV output\n"
                   << "  --test                         Run hyperparameter search\n";
                 return 0;
+                        }else{
+                                throw std::invalid_argument("unknown option: " + arg + " (use --help for usage)");
             }
         }
 

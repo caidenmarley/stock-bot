@@ -1609,13 +1609,66 @@ cd /home/caidenmarley/stock-bot && git status --short
 - Main/Trainer seed plumbing is cleaner and more complete for deterministic model initialization in covered paths.
 - Full executable-level determinism is still not guaranteed due remaining uncontrolled paths (notably Trainer shuffle seed control).
 
+### **Milestone 13Q: Invalid CLI Argument Handling Smoke Coverage** ✅ COMPLETE (July 5, 2026)
+
+**Scope**: Small CLI robustness task to ensure invalid arguments fail clearly/non-zero and safely, without changing ML behavior.
+
+**Files Changed**:
+- `main.cpp` (minimal CLI parsing hardening for unknown flags, missing values, invalid numeric values, and non-positive epochs/patience)
+- `tests/cli_invalid_args_test.cpp` (NEW executable-level invalid-argument smoke test)
+- `CMakeLists.txt` (added `cli_invalid_args_test` target, CTest registration, and `run_tests` dependency)
+- `docs/BUILD.md` (added build/run entry for `cli_invalid_args_test` and invalid-arg example)
+- `docs/KNOWN_RISKS.md` (updated CLI robustness risk wording for covered invalid cases)
+- `docs/REFACTOR_PLAN.md` (marked invalid-arg coverage complete; updated next likely follow-up)
+- `PROJECT_STATE.md` (this milestone note)
+
+**CLI behavior before**:
+1. Unknown flags were silently ignored.
+2. Some missing-value cases (for value-taking flags) could be silently ignored rather than failing clearly.
+3. Invalid numeric values generally failed via exception path, but error handling was less explicit/consistent.
+
+**CLI behavior after**:
+1. Unknown options now fail fast with clear non-zero error.
+2. Missing value for value-taking options now fails non-zero with clear message.
+3. Invalid numeric values fail non-zero with clear option-specific message.
+4. Non-positive `--epochs` and non-positive `--early-stop-patience` are now rejected non-zero.
+5. Valid covered behavior remains unchanged (`--epochs 1`, `--seed 0`, `--early-stop-patience 1`, `--no-results`, `--results-file PATH`).
+
+**Invalid cases covered in `cli_invalid_args_test`**:
+1. `--definitely-invalid-option`
+2. `--epochs` (missing value)
+3. `--epochs not-a-number`
+4. `--seed not-a-number`
+5. `--results-file` (missing value)
+6. `--epochs 0`
+7. `--epochs -1`
+8. `--early-stop-patience 0`
+
+**Commands Used**:
+```bash
+cd /home/caidenmarley/stock-bot && cmake --build build --target cli_invalid_args_test
+cd /home/caidenmarley/stock-bot && ./build/cli_invalid_args_test
+cd /home/caidenmarley/stock-bot && cmake --build build --target run_tests
+cd /home/caidenmarley/stock-bot && ctest --test-dir build --output-on-failure
+cd /home/caidenmarley/stock-bot && git status --short
+```
+
+**Results**:
+- `./build/cli_invalid_args_test`: ✅ **1/1 PASSED**
+- `ctest --test-dir build --output-on-failure`: ✅ **20/20 tests passed**
+- No source-tree `tests/results.csv` or `data/results.csv` created/modified in this task.
+
+**Milestone 13Q Conclusion**:
+- CLI handling is clearer and safer for covered invalid-argument cases.
+- This does not prove exhaustive CLI parser robustness for every possible option combination.
+
 ---
 
 ## Summary
 
 **Current State**: 
 - Core LSTM, training loop, and rolling validation are implemented and verified to run
-  - **Milestone 2–13P Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, end-to-end determinism audit, results-file hygiene improvements, focused AdaBelief optimizer coverage, focused Trainer-level behavior coverage, executable CLI smoke coverage, hyperparameter-search cleanup/audit, Dense seeding/API design audit, optional Dense deterministic initialization implementation, and Trainer/main seed plumbing are complete ✅
+  - **Milestone 2–13Q Status**: Build/runtime/test milestones plus documentation extraction, refactor planning, CTest full-suite convenience updates, documentation cleanup, reproducibility verification, broader deterministic LSTM gradient coverage, integration-level validation coverage expansion, end-to-end determinism audit, results-file hygiene improvements, focused AdaBelief optimizer coverage, focused Trainer-level behavior coverage, executable CLI smoke coverage, hyperparameter-search cleanup/audit, Dense seeding/API design audit, optional Dense deterministic initialization implementation, Trainer/main seed plumbing, and invalid CLI argument smoke coverage are complete ✅
     - Milestone 2: CMake configured, both targets compiled cleanly
     - Milestone 3: Both executables run successfully, output is reasonable
     - Milestone 4: CSVLoader robustness verified (8 comprehensive parser tests all passed)
@@ -1643,7 +1696,8 @@ cd /home/caidenmarley/stock-bot && git status --short
     - Milestone 13N: Dense seeding/API design audit completed (docs only; implementation pending)
     - Milestone 13O: Dense optional seed implementation completed (`dense_seed_test`)
     - Milestone 13P: Trainer/main seed plumbing completed (`seed_plumbing_test`)
-  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `dense_seed_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, `end_to_end_determinism_test`, `results_file_hygiene_test`, `adabelief_test`, `trainer_behavior_test`, `cli_smoke_test`, `hyperparam_search_test`, and `seed_plumbing_test`
+    - Milestone 13Q: Invalid CLI argument smoke coverage completed (`cli_invalid_args_test`)
+  - Test suites now include `testbed`, `parser_test`, `rolling_window_scaler_test`, `stock_data_test`, `loss_metrics_test`, `dense_gradient_test`, `dense_seed_test`, `lstm_parameter_order_test`, `lstm_gradient_test`, `time_series_validation_test`, `reproducibility_test`, `integration_validation_test`, `end_to_end_determinism_test`, `results_file_hygiene_test`, `adabelief_test`, `trainer_behavior_test`, `cli_smoke_test`, `cli_invalid_args_test`, `hyperparam_search_test`, and `seed_plumbing_test`
 - LSTM backward/BPTT now has broader deterministic numerical verification across multiple configurations; coverage is improved but not exhaustive
 - Integration-level validation coverage is improved for one deterministic cross-component path, but still not exhaustive
 - Determinism coverage now includes controlled repeated-run path checks, but full executable-level determinism remains unverified
@@ -1654,6 +1708,7 @@ cd /home/caidenmarley/stock-bot && git status --short
 - Hyperparameter search now has safe default output hygiene and explicit randomSearch unavailability, but search flow remains outside main runtime integration
 - Dense now supports optional deterministic initialization (Milestone 13O), but full production same-seed determinism still depends on broader seed plumbing and control-path coverage
 - Main/Trainer seed plumbing now applies explicit seed to both LSTM and Dense initialization in covered CLI path, but trainer shuffle seed control remains fixed/internal
+- CLI parser now fails non-zero for covered invalid-argument cases, reducing silent-failure risk for common option mistakes
 
 **Main Risks**: 
 - LSTM gradient verification is broader than before but still not exhaustive, plus residual validation leakage risk (reduced by Milestone 12 but not exhaustively eliminated)
@@ -1687,6 +1742,7 @@ cd /home/caidenmarley/stock-bot && git status --short
 24. ✅ Dense initialization seeding/API design audit for stronger end-to-end reproducibility controls (Milestone 13N, docs-only) – **COMPLETE (July 5, 2026)**
 25. ✅ Implement Dense deterministic initialization API (Milestone 13O) and add focused coverage (`dense_seed_test`) – **COMPLETE (July 5, 2026)**
 26. ✅ Trainer/main seed plumbing for broader production-path deterministic initialization claims (Milestone 13P) – **COMPLETE (July 5, 2026)**
-27. Invalid CLI argument handling coverage (error-path behavior) or final recovery-summary consolidation – **Next step**
+27. ✅ Invalid CLI argument handling smoke coverage (Milestone 13Q) – **COMPLETE (July 5, 2026)**
+28. Final recovery-summary consolidation and decision on next development phase (stability hardening vs model improvement) – **Next step**
 
 This recovery approach prioritizes understanding and correctness before expansion to multi-model ensemble or web scraping.

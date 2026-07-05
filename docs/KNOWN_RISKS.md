@@ -25,10 +25,12 @@
 
 - Trainer CSV output path is now configurable/disable-able, reducing accidental source-tree writes.
 - CLI smoke coverage now verifies short `stock_bot` runs with `--no-results` and with safe build-local `--results-file` path, plus source-tree result-file non-modification for those covered commands.
+- CLI invalid-argument smoke coverage now verifies non-zero failure for covered invalid cases (unknown option, missing values, invalid numeric values, and non-positive epochs/patience).
 - Generated results files can still create noisy working-tree diffs if users point output to tracked source-tree paths.
 - Hyperparameter search now defaults to build-local `build/results/hyperparam_search_results.csv` and supports explicit output-path selection, reducing source-tree output risk for covered paths.
 - `randomSearch` remains intentionally unavailable (throws clear not-implemented error) and is not integrated in main flow.
 - `stock_bot` currently uses fixed `data/AAAU.csv` path in `main.cpp` (no CLI data-path argument), so CLI smoke tests depend on repository-local dataset presence.
+- CLI parsing robustness is improved for covered options, but invalid-argument handling is not exhaustively proven for every possible flag combination.
 
 ## Integration and Product Scope Risks
 
