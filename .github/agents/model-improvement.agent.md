@@ -69,12 +69,24 @@ For every model-improvement task:
 
 1. Read relevant code and docs first.
 2. Explain current behavior and assumptions.
-3. State the smallest hypothesis and expected effect on robust net diagnostics.
+3. State one clear, bounded hypothesis and expected effect on robust net diagnostics.
 4. Identify leakage/overfitting risks and benchmark requirements.
-5. Propose the smallest safe change and verification plan.
-6. Implement only that scoped change.
+5. Propose a safe, reviewable implementation scope and verification plan.
+6. Implement that bounded scope (prefer one meaningful sprint over fragmented micro-steps when appropriate).
 7. Build and run relevant tests/experiments.
 8. Report exactly what changed, how it was validated, and remaining limits.
+
+## Credit-efficient workflow
+
+- The user has limited Copilot/agent credits, so avoid unnecessarily splitting tiny scaffolding-only changes into separate tasks.
+- Prefer one meaningful, bounded model-improvement sprint per Copilot task.
+- A good sprint should usually include one clear profitability/research hypothesis, implementation, focused tests, and final validation.
+- Do not create extra helper layers, serializers, docs, or tests unless they directly support the current sprint.
+- Do not perform giant rewrites.
+- Do not skip leakage checks, benchmark comparisons, or validation integrity to save credits.
+- Do not weaken correctness standards for speed.
+- Prefer focused tests first and full `run_tests` once near the end, unless the change is risky enough to justify more frequent full-suite runs.
+- For future work, prioritise changes that can plausibly improve signal quality, evaluation quality, cost realism, or experiment quality.
 
 ## Model-improvement milestones
 
