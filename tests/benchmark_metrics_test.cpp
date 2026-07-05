@@ -3,6 +3,7 @@
 #include <cmath>
 #include <functional>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -195,6 +196,82 @@ void test_model_and_benchmark_random_reproducibility() {
     }
 }
 
+void test_csv_header_is_exactly_stable() {
+    expectTrue(
+        metrics::benchmarkComparisonCsvHeader() ==
+            "strategy,sharpe_net,avg_turnover,cumulative_net_return,num_observations",
+        "CSV header mismatch"
+    );
+}
+
+void test_csv_row_order_is_preserved() {
+    const std::vector<metrics::BenchmarkSummary> rows = {
+        {"model", 1.0, 0.1, 0.2, 3},
+        {"cash", 0.0, 0.0, 0.0, 3},
+        {"buy_and_hold", 2.0, 1.0, 0.3, 3},
+    };
+
+    const auto csvRows = metrics::benchmarkComparisonToCsvRows(rows);
+    expectTrue(csvRows.size() == rows.size(), "csv row count mismatch");
+    expectTrue(csvRows[0].rfind("model,", 0) == 0, "row order mismatch for model");
+    expectTrue(csvRows[1].rfind("cash,", 0) == 0, "row order mismatch for cash");
+    expectTrue(csvRows[2].rfind("buy_and_hold,", 0) == 0, "row order mismatch for buy_and_hold");
+}
+
+void test_csv_emits_all_expected_fields_with_deterministic_format() {
+    const std::vector<metrics::BenchmarkSummary> rows = {
+        {"model", 1.23456789, 0.25, -0.5, 42},
+    };
+
+    const auto csvRows = metrics::benchmarkComparisonToCsvRows(rows);
+    expectTrue(csvRows.size() == 1, "expected one csv row");
+    expectTrue(
+        csvRows[0] == "model,1.234568,0.250000,-0.500000,42",
+        "deterministic CSV formatting mismatch"
+    );
+}
+
+void test_csv_empty_input_produces_no_data_rows() {
+    const auto csvRows = metrics::benchmarkComparisonToCsvRows({});
+    expectTrue(csvRows.empty(), "empty input should produce no csv data rows");
+}
+
+void test_csv_serializer_does_not_mutate_input() {
+    std::vector<metrics::BenchmarkSummary> rows = {
+        {"model", 1.0, 0.2, 0.3, 4},
+        {"cash", 0.0, 0.0, 0.0, 4},
+    };
+    const auto before = rows;
+
+    const auto csvRows = metrics::benchmarkComparisonToCsvRows(rows);
+    expectTrue(csvRows.size() == 2, "expected two csv rows");
+    expectTrue(rows.size() == before.size(), "input row count mutated");
+    for (std::size_t i = 0; i < rows.size(); ++i) {
+        expectTrue(rows[i].name == before[i].name, "input name mutated");
+        expectNear(rows[i].sharpeNet, before[i].sharpeNet, "input sharpe mutated");
+        expectNear(rows[i].avgTurnover, before[i].avgTurnover, "input turnover mutated");
+        expectNear(rows[i].cumulativeNetReturn, before[i].cumulativeNetReturn, "input cumulative return mutated");
+        expectTrue(rows[i].numObservations == before[i].numObservations, "input observations mutated");
+    }
+}
+
+void test_comparison_rows_serialize_directly() {
+    metrics::ProfitAndLossParams params{0.0, 0.001, 252};
+    const std::vector<double> preds = {0.2, -0.1, 0.3, -0.4};
+    const std::vector<double> returns = {0.01, -0.02, 0.03, -0.04};
+
+    const auto rows = metrics::evaluateModelAndBenchmarks(preds, returns, params, 123u);
+    const auto csvRows = metrics::benchmarkComparisonToCsvRows(rows);
+
+    expectTrue(rows.size() == 5, "expected five comparison rows");
+    expectTrue(csvRows.size() == rows.size(), "csv row count should match comparison rows");
+    expectTrue(csvRows[0].rfind("model,", 0) == 0, "serialized model row missing or out of order");
+    expectTrue(csvRows[1].rfind("cash,", 0) == 0, "serialized cash row missing or out of order");
+    expectTrue(csvRows[2].rfind("buy_and_hold,", 0) == 0, "serialized buy_and_hold row missing or out of order");
+    expectTrue(csvRows[3].rfind("random_noskill,", 0) == 0, "serialized random_noskill row missing or out of order");
+    expectTrue(csvRows[4].rfind("prev_return_momentum,", 0) == 0, "serialized prev_return_momentum row missing or out of order");
+}
+
 } // namespace
 
 int main() {
@@ -210,6 +287,12 @@ int main() {
         {"model row threshold logic", test_model_row_uses_threshold_position_logic},
         {"benchmark rows match standard helper", test_benchmark_rows_match_standard_helper},
         {"model+benchmark random reproducibility", test_model_and_benchmark_random_reproducibility},
+        {"csv header stable", test_csv_header_is_exactly_stable},
+        {"csv row order preserved", test_csv_row_order_is_preserved},
+        {"csv emits deterministic fields", test_csv_emits_all_expected_fields_with_deterministic_format},
+        {"csv empty input", test_csv_empty_input_produces_no_data_rows},
+        {"csv serializer non mutating", test_csv_serializer_does_not_mutate_input},
+        {"comparison rows serialize directly", test_comparison_rows_serialize_directly},
     };
 
     std::size_t passed = 0;

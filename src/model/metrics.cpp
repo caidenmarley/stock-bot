@@ -2,8 +2,10 @@
 #include <vector>
 #include <cassert>
 #include <cmath>
+#include <iomanip>
 #include <numeric>
 #include <random>
+#include <sstream>
 #include <string>
 
 
@@ -220,6 +222,30 @@ std::vector<BenchmarkSummary> evaluateModelAndBenchmarks(
         randomSeed
     );
     out.insert(out.end(), benchmarks.begin(), benchmarks.end());
+
+    return out;
+}
+
+std::string benchmarkComparisonCsvHeader() {
+    return "strategy,sharpe_net,avg_turnover,cumulative_net_return,num_observations";
+}
+
+std::vector<std::string> benchmarkComparisonToCsvRows(
+    const std::vector<BenchmarkSummary>& rows
+) {
+    std::vector<std::string> out;
+    out.reserve(rows.size());
+
+    for (const auto& row : rows) {
+        std::ostringstream line;
+        line << row.name << ","
+             << std::fixed << std::setprecision(6)
+             << row.sharpeNet << ","
+             << row.avgTurnover << ","
+             << row.cumulativeNetReturn << ","
+             << row.numObservations;
+        out.push_back(line.str());
+    }
 
     return out;
 }

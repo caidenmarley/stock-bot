@@ -29,6 +29,7 @@
 - Cost/slippage realism remains limited.
 - Benchmark helpers now provide cash, buy-and-hold, random/no-skill, and previous-return momentum diagnostics under shared assumptions, but these remain simple baselines and are not exhaustive strategy benchmarks.
 - Model-vs-benchmark comparison helpers currently follow existing metrics conventions and rely on `assert` for mismatched prediction/return lengths rather than user-facing runtime error handling.
+- CSV serialization helpers now provide a stable reporting schema for comparison rows, but they are formatting utilities only and are not yet wired into a broader experiment-tracking pipeline.
 
 ## Workflow and Artifact Risks
 

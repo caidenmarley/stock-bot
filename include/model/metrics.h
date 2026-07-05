@@ -160,4 +160,18 @@ std::vector<BenchmarkSummary> evaluateModelAndBenchmarks(
     const ProfitAndLossParams& params,
     uint32_t randomSeed
 );
+
+/**
+ * Stable CSV schema for benchmark comparison rows:
+ * strategy,sharpe_net,avg_turnover,cumulative_net_return,num_observations
+ */
+std::string benchmarkComparisonCsvHeader();
+
+/**
+ * Serialize already-computed benchmark comparison rows.
+ * Preserves input row order and uses deterministic fixed-precision formatting.
+ */
+std::vector<std::string> benchmarkComparisonToCsvRows(
+    const std::vector<BenchmarkSummary>& rows
+);
 }

@@ -204,6 +204,13 @@ Added model-vs-benchmark comparison helper:
 - shared schema: name, sharpeNet, avgTurnover, cumulativeNetReturn, numObservations
 - model row uses existing threshold-to-position logic and the same PnL/cost path as benchmarks
 
+Added compact serializer helpers:
+- stable header: strategy,sharpe_net,avg_turnover,cumulative_net_return,num_observations
+- one CSV row per comparison row
+- fixed numeric formatting at 6 decimal places for floating-point fields
+- preserves input row order
+- empty input convention: header exists conceptually via helper, row serializer returns zero data rows
+
 Current convention note:
 - helper size checks follow existing metrics conventions and rely on assert for prediction/return length mismatch
 - this is acceptable for current internal/testing usage but is not a user-facing runtime error API
