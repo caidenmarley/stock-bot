@@ -109,6 +109,12 @@ void assertResultLooksValid(const TrainingResult& r) {
     expectTrue(std::isfinite(r.bestValLoss), "best validation loss should be finite");
     expectTrue(r.bestValLoss >= 0.0, "best validation loss should be non-negative");
     expectTrue(r.bestValLoss < 1e6, "best validation loss should improve from initial sentinel");
+    expectTrue(std::isfinite(r.finalValSharpeNet), "final validation sharpe should be finite");
+    expectTrue(std::isfinite(r.finalValAvgTurnover), "final validation avg turnover should be finite");
+    expectTrue(r.finalValBenchmarkRows.size() == 5,
+               "final validation benchmark rows should include model plus four baseline rows");
+    expectTrue(!r.finalValBenchmarkRows.empty() && r.finalValBenchmarkRows.front().name == "model",
+               "first benchmark row should be model for stable schema");
 }
 
 void test_tiny_trainer_run_with_output_disabled_keeps_source_tree_clean() {

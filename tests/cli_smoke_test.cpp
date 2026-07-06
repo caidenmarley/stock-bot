@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <algorithm>
 #include <filesystem>
 #include <functional>
 #include <fstream>
@@ -106,6 +107,20 @@ void test_cli_no_results_and_safe_results_file_paths() {
     expectTrue(noResultsExit == 0,
                "stock_bot should exit with status 0 for minimal run with --no-results");
 
+    const std::string runFeature6 =
+        "cd \"" + repoRoot.string() + "\" && \"" + stockBotPath.string() +
+        "\" --epochs 1 --seed 0 --early-stop-patience 1 --feature-count 6 --no-results";
+    const int feature6Exit = runCommand(runFeature6);
+    expectTrue(feature6Exit == 0,
+               "stock_bot should accept --feature-count 6 for a short deterministic run");
+
+    const std::string runFeature13 =
+        "cd \"" + repoRoot.string() + "\" && \"" + stockBotPath.string() +
+        "\" --epochs 1 --seed 0 --early-stop-patience 1 --feature-count 13 --no-results";
+    const int feature13Exit = runCommand(runFeature13);
+    expectTrue(feature13Exit == 0,
+               "stock_bot should accept --feature-count 13 for a short deterministic run");
+
     const std::string runSafeResults =
         "cd \"" + repoRoot.string() + "\" && \"" + stockBotPath.string() +
         "\" --epochs 1 --seed 0 --early-stop-patience 1 --results-file \"" +
@@ -115,10 +130,43 @@ void test_cli_no_results_and_safe_results_file_paths() {
     expectTrue(safeResultsExit == 0,
                "stock_bot should exit with status 0 for minimal run with --results-file");
 
+    const std::filesystem::path ablationReportPath = repoRoot / "build" / "test_outputs" / "feature_ablation_smoke.csv";
+    std::filesystem::remove(ablationReportPath, ec);
+
+    const std::string runAblation =
+        "cd \"" + repoRoot.string() + "\" && \"" + stockBotPath.string() +
+        "\" --epochs 1 --seed 0 --early-stop-patience 1 --feature-ablation --ablation-report \"" +
+        ablationReportPath.string() + "\" --no-results";
+    const int ablationExit = runCommand(runAblation);
+    expectTrue(ablationExit == 0,
+               "stock_bot should run deterministic 6-vs-13 feature ablation mode");
+
     expectTrue(std::filesystem::exists(safeResultsPath),
                "stock_bot should create build-local results file when --results-file is used");
     expectTrue(std::filesystem::file_size(safeResultsPath) > 0,
                "build-local CLI smoke result file should be non-empty");
+
+    expectTrue(std::filesystem::exists(ablationReportPath),
+               "ablation report path should be created");
+    expectTrue(std::filesystem::file_size(ablationReportPath) > 0,
+               "ablation report should be non-empty");
+
+    std::ifstream ablationIn(ablationReportPath);
+    expectTrue(static_cast<bool>(ablationIn), "ablation report should be readable");
+    std::string ablationHeader;
+    expectTrue(static_cast<bool>(std::getline(ablationIn, ablationHeader)),
+               "ablation report should include a header");
+    expectTrue(
+        ablationHeader ==
+            "feature_count,fold,best_val_loss,epoch_of_best_val_loss,total_epochs,model_sharpe_net,avg_turnover,strategy,strategy_sharpe_net,strategy_avg_turnover,strategy_cumulative_net_return,strategy_num_observations",
+        "ablation report header should match stable schema");
+
+    std::string firstDataLine;
+    expectTrue(static_cast<bool>(std::getline(ablationIn, firstDataLine)),
+               "ablation report should include at least one data line");
+    std::size_t commaCount = static_cast<std::size_t>(std::count(firstDataLine.begin(), firstDataLine.end(), ','));
+    expectTrue(commaCount == 11,
+               "ablation report data lines should contain 12 CSV columns");
 
     const FileSnapshot afterTestsResults = snapshotFile(testsResultsPath);
     const FileSnapshot afterDataResults = snapshotFile(dataResultsPath);

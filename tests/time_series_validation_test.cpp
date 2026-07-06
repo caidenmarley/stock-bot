@@ -155,6 +155,42 @@ void test_preloaded_validation_context_does_not_use_future_validation_rows_for_e
     }
 }
 
+void test_time_series_validation_targets_match_between_six_and_thirteen_feature_modes() {
+    const std::vector<double> closes{100.0, 102.0, 105.0, 109.0, 114.0, 120.0, 127.0, 135.0};
+    const auto raw = makeSeries(closes);
+    const int sequenceLength = 3;
+    const int batchSize = 2;
+
+    RollingWindowScaler scaler6(/*windowSize=*/3, /*numFeatures=*/6);
+    RollingWindowScaler scaler13(/*windowSize=*/3, static_cast<std::size_t>(stock_features::kFeatureCount));
+
+    StockData validation6(raw, /*numFeatures=*/6, sequenceLength, batchSize, scaler6);
+    StockData validation13(raw, stock_features::kFeatureCount, sequenceLength, batchSize, scaler13);
+
+    std::vector<double> targets6;
+    std::vector<double> targets13;
+
+    while (validation6.hasAnotherBatch()) {
+        auto [inputs, targets] = validation6.nextBatch();
+        (void)inputs;
+        for (int i = 0; i < targets.size(); ++i) {
+            targets6.push_back(targets(i));
+        }
+    }
+    while (validation13.hasAnotherBatch()) {
+        auto [inputs, targets] = validation13.nextBatch();
+        (void)inputs;
+        for (int i = 0; i < targets.size(); ++i) {
+            targets13.push_back(targets(i));
+        }
+    }
+
+    expectTrue(targets6.size() == targets13.size(), "6-feature and 13-feature validation target counts should match");
+    for (std::size_t i = 0; i < targets6.size(); ++i) {
+        expectNear(targets6[i], targets13[i], "validation target mismatch between 6 and 13 feature modes");
+    }
+}
+
 } // namespace
 
 int main() {
@@ -162,6 +198,7 @@ int main() {
         {"fold split ordering and overlap", test_fold_splits_are_time_ordered_and_overlapping_by_design},
         {"validation batching and target alignment", test_validation_batches_are_sequential_and_targets_are_next_day_returns},
         {"validation preloading no future influence on early windows", test_preloaded_validation_context_does_not_use_future_validation_rows_for_early_windows},
+        {"validation target alignment stable across 6 and 13 feature modes", test_time_series_validation_targets_match_between_six_and_thirteen_feature_modes},
     };
 
     std::size_t passed = 0;

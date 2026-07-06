@@ -4,6 +4,7 @@
 #include "model/dense.h"
 #include "model/huber_loss_function.h"
 #include "model/lstm.h"
+#include "model/metrics.h"
 #include "inputs/stock_data.h"
 #include <Eigen/Dense>
 #include <cstdint>
@@ -14,6 +15,9 @@ struct TrainingResult{
     double bestValLoss;
     int epochOfBestValLoss;
     int totalEpochs;
+    double finalValSharpeNet{0.0};
+    double finalValAvgTurnover{0.0};
+    std::vector<metrics::BenchmarkSummary> finalValBenchmarkRows{};
 };
 
 class Trainer{

@@ -67,6 +67,10 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
     double bestValLoss = 1000000;
     int bestEpoch = 0;
     int noImproveCount = 0;
+    double finalValSharpeNet = 0.0;
+    double finalValAvgTurnover = 0.0;
+    std::vector<metrics::BenchmarkSummary> finalValBenchmarkRows;
+    std::mt19937 rng(42u);
 
     for(int epoch = 1; epoch <= epochs; epoch++){
         // TRAINING
@@ -79,7 +83,6 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
         std::vector<int> order(trainingData.getNumWindows());
         std::iota(order.begin(), order.end(), 0); // fills in increasing order from 0
 
-        static thread_local std::mt19937 rng(42); // TODO link up to global seed
         std::shuffle(order.begin(), order.end(), rng);
 
         // loop over all batches
@@ -228,7 +231,7 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
                       << " (dense lr " << learningRate << "), tries left " << lrDecayMaxTries << "\n";
                 }else{
                     std::cout << "stopping early at epoch " << epoch << ", best val loss = " << bestValLoss << " at epoch " << bestEpoch << std::endl;
-                    return {bestValLoss, bestEpoch, epoch};
+                    return {bestValLoss, bestEpoch, epoch, finalValSharpeNet, finalValAvgTurnover, finalValBenchmarkRows};
                 }
             }
         }
@@ -250,6 +253,9 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
             252 // 252 trading days per year
         };
         metrics::SharpeAndTurnover sharpeAndTurnover = metrics::calcSharpeAndTurnover(valPreds, valTargets, params);
+        finalValSharpeNet = sharpeAndTurnover.sharpeNet;
+        finalValAvgTurnover = sharpeAndTurnover.avgTurnover;
+        finalValBenchmarkRows = metrics::evaluateModelAndBenchmarks(valPreds, valTargets, params, 42u);
 
         std::cout << "[PNL] sharpe: " << std::fixed << std::setprecision(2) << sharpeAndTurnover.sharpeNet 
                   << " | avgTurnover: " <<  std::setprecision(3) << sharpeAndTurnover.avgTurnover << std::endl;
@@ -291,5 +297,5 @@ TrainingResult Trainer::run(const int epochs, double stoppingToleranceLoss, int 
         }
     }
 
-    return {bestValLoss, bestEpoch, epochs};
+    return {bestValLoss, bestEpoch, epochs, finalValSharpeNet, finalValAvgTurnover, finalValBenchmarkRows};
 }

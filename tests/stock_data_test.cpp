@@ -180,6 +180,50 @@ void test_target_alignment_formula() {
     }
 }
 
+void test_target_alignment_formula_six_feature_mode() {
+    const std::vector<double> closes = {10, 12, 15, 19, 24, 30, 37, 45};
+    const int sequenceLength = 3;
+    StockData data = makeStockData(closes, sequenceLength, /*batchSize=*/2, /*numFeatures=*/6);
+    const auto expected = expectedTargets(closes, sequenceLength);
+
+    std::vector<double> actual;
+    actual.reserve(expected.size());
+    while (data.hasAnotherBatch()) {
+        auto [inputs, targets] = data.nextBatch();
+        (void)inputs;
+        for (int i = 0; i < targets.size(); ++i) {
+            actual.push_back(targets(i));
+        }
+    }
+
+    expectTrue(actual.size() == expected.size(), "6-feature target count mismatch");
+    for (std::size_t i = 0; i < actual.size(); ++i) {
+        expectNear(actual[i], expected[i], "6-feature target alignment mismatch at index " + std::to_string(i));
+    }
+}
+
+void test_target_alignment_formula_thirteen_feature_mode() {
+    const std::vector<double> closes = {10, 12, 15, 19, 24, 30, 37, 45};
+    const int sequenceLength = 3;
+    StockData data = makeStockData(closes, sequenceLength, /*batchSize=*/2, stock_features::kFeatureCount);
+    const auto expected = expectedTargets(closes, sequenceLength);
+
+    std::vector<double> actual;
+    actual.reserve(expected.size());
+    while (data.hasAnotherBatch()) {
+        auto [inputs, targets] = data.nextBatch();
+        (void)inputs;
+        for (int i = 0; i < targets.size(); ++i) {
+            actual.push_back(targets(i));
+        }
+    }
+
+    expectTrue(actual.size() == expected.size(), "13-feature target count mismatch");
+    for (std::size_t i = 0; i < actual.size(); ++i) {
+        expectNear(actual[i], expected[i], "13-feature target alignment mismatch at index " + std::to_string(i));
+    }
+}
+
 void test_next_batch_shuffled_respects_order() {
     const std::vector<double> closes = {10, 12, 15, 19, 24, 30, 37, 45};
     const int sequenceLength = 3;
@@ -314,6 +358,8 @@ int main() {
         {"reset restarts batching", test_reset_restarts_batching},
         {"nextBatch throws after consumed", test_next_batch_throws_after_consumed},
         {"target alignment formula", test_target_alignment_formula},
+        {"target alignment formula in 6-feature mode", test_target_alignment_formula_six_feature_mode},
+        {"target alignment formula in 13-feature mode", test_target_alignment_formula_thirteen_feature_mode},
         {"nextBatchShuffled order", test_next_batch_shuffled_respects_order},
         {"input tensor shape", test_input_tensor_shape},
         {"engineered feature count", test_engineered_feature_count_constant_and_raw_vector_size},

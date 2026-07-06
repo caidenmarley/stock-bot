@@ -104,6 +104,14 @@ void test_invalid_cli_cases_fail_nonzero_and_keep_source_tree_clean() {
         {"epochs zero", base + " --epochs 0"},
         {"epochs negative", base + " --epochs -1"},
         {"patience zero", base + " --early-stop-patience 0"},
+        {"feature-count missing value", base + " --feature-count"},
+        {"feature-count not-a-number", base + " --feature-count nope"},
+        {"feature-count zero", base + " --feature-count 0"},
+        {"feature-count negative", base + " --feature-count -1"},
+        {"feature-count above engineered max", base + " --feature-count 14"},
+        {"feature-count unsupported mid value", base + " --feature-count 7"},
+        {"ablation report missing value", base + " --ablation-report"},
+        {"ablation with explicit feature-count is ambiguous", base + " --feature-ablation --feature-count 6"},
     };
 
     for (const auto& [name, cmd] : invalidCases) {

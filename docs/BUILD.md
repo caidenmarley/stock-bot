@@ -90,6 +90,11 @@ cd /home/caidenmarley/stock-bot
 ./build/stock_bot --epochs 1 --seed 0 --early-stop-patience 1 --no-results
 ./build/stock_bot --epochs 1 --seed 0 --early-stop-patience 1 --results-file build/results/cli_smoke_results.csv
 
+# feature-count ablation modes
+./build/stock_bot --epochs 1 --seed 0 --early-stop-patience 1 --feature-count 6 --no-results
+./build/stock_bot --epochs 1 --seed 0 --early-stop-patience 1 --feature-count 13 --no-results
+./build/stock_bot --epochs 1 --seed 0 --early-stop-patience 1 --feature-ablation --ablation-report build/test_outputs/feature_ablation_v1.csv --no-results
+
 # invalid flags/values should fail non-zero
 ./build/stock_bot --definitely-invalid-option
 ```

@@ -224,3 +224,34 @@ Current convention note:
 Design guardrail retained:
 - benchmark helpers are evaluation utilities only
 - no training behavior, target construction, optimizer, or validation split logic changed
+
+## MI-3 Feature Engineering V1 Ablation (6 vs 13 features)
+
+Added bounded ablation support to compare the legacy 6-feature baseline against the 13-feature Feature Engineering V1 set under shared assumptions.
+
+CLI options:
+- `--feature-count 6` runs the legacy first-six feature subset
+- `--feature-count 13` runs full Feature Engineering V1
+- default path remains `13` features
+- `--feature-ablation` runs both 6 and 13 in one command
+- `--ablation-report PATH` writes a deterministic build-local comparison CSV
+
+Validation comparability constraints retained for both modes:
+- same target construction
+- same fold policy
+- same epoch and early-stopping settings
+- same trading-cost assumptions in metrics
+- same benchmark set in comparison rows
+
+Ablation report schema:
+- `feature_count`
+- `fold`
+- `best_val_loss`
+- `epoch_of_best_val_loss`
+- `total_epochs`
+- `model_sharpe_net`
+- `avg_turnover`
+- strategy comparison columns from stable benchmark helpers
+
+Guardrail retained:
+- this is an evaluation/experiment path only; no architecture change beyond selectable input feature count
