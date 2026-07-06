@@ -112,6 +112,11 @@ void test_invalid_cli_cases_fail_nonzero_and_keep_source_tree_clean() {
         {"feature-count unsupported mid value", base + " --feature-count 7"},
         {"ablation report missing value", base + " --ablation-report"},
         {"ablation with explicit feature-count is ambiguous", base + " --feature-ablation --feature-count 6"},
+        {"data-path missing value", base + " --data-path"},
+        {"data-dir missing value", base + " --data-dir"},
+        {"data-path does not exist", base + " --data-path build/test_outputs/no_such_file.csv"},
+        {"data-dir does not exist", base + " --data-dir build/test_outputs/no_such_dir"},
+        {"data-path and data-dir both provided", base + " --data-path data/AAAU.csv --data-dir data"},
     };
 
     for (const auto& [name, cmd] : invalidCases) {

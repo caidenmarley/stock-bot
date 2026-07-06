@@ -95,6 +95,11 @@ cd /home/caidenmarley/stock-bot
 ./build/stock_bot --epochs 1 --seed 0 --early-stop-patience 1 --feature-count 13 --no-results
 ./build/stock_bot --epochs 1 --seed 0 --early-stop-patience 1 --feature-ablation --ablation-report build/test_outputs/feature_ablation_v1.csv --no-results
 
+# explicit dataset selection
+./build/stock_bot --data-path data/AAAU.csv --epochs 1 --seed 0 --early-stop-patience 1 --feature-count 13 --no-results
+./build/stock_bot --data-dir data --epochs 1 --seed 0 --early-stop-patience 1 --feature-count 13 --no-results
+./build/stock_bot --feature-ablation --data-dir data --ablation-report build/results/multi_ticker_feature_ablation.csv --epochs 1 --seed 0 --early-stop-patience 1 --no-results
+
 # invalid flags/values should fail non-zero
 ./build/stock_bot --definitely-invalid-option
 ```
@@ -128,3 +133,6 @@ You can call `gridSearch(...)` with an explicit output path to keep results buil
 
 These are generated artifacts and should not usually be committed as source changes.
 Use build-local paths (for example under `build/results/` or `build/test_outputs/`) to avoid dirty source-tree files during tests and audits.
+
+For `--data-dir` runs, CSV files are discovered deterministically (sorted by filename).
+If a file is malformed or too short for the configured sequence/fold setup, the run prints a warning and continues with the remaining files.

@@ -4,6 +4,7 @@
 #include <functional>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -86,6 +87,45 @@ int runCommand(const std::string& command) {
     return std::system(command.c_str());
 }
 
+void writeSyntheticCsv(const std::filesystem::path& filePath, int rows, double baseClose) {
+    if (filePath.has_parent_path()) {
+        std::error_code ec;
+        std::filesystem::create_directories(filePath.parent_path(), ec);
+    }
+
+    std::ofstream out(filePath);
+    if (!out) {
+        throw std::runtime_error("failed to create synthetic csv: " + filePath.string());
+    }
+
+    out << "Date,Open,High,Low,Close,Adj Close,Volume\n";
+    for (int i = 0; i < rows; ++i) {
+        const double close = baseClose + static_cast<double>(i) * 0.5;
+        const double open = close - 0.2;
+        const double high = close + 0.4;
+        const double low = close - 0.5;
+        const double adjClose = close;
+        const std::uint64_t volume = static_cast<std::uint64_t>(100000 + i * 100);
+        out << "2020-01-" << (i + 1) << ","
+            << open << ","
+            << high << ","
+            << low << ","
+            << close << ","
+            << adjClose << ","
+            << volume << "\n";
+    }
+}
+
+std::vector<std::string> splitCsv(const std::string& line) {
+    std::vector<std::string> cols;
+    std::stringstream ss(line);
+    std::string item;
+    while (std::getline(ss, item, ',')) {
+        cols.push_back(item);
+    }
+    return cols;
+}
+
 void test_cli_no_results_and_safe_results_file_paths() {
     const std::filesystem::path repoRoot = findRepoRoot();
     const std::filesystem::path stockBotPath = findStockBotExecutable(repoRoot);
@@ -99,6 +139,24 @@ void test_cli_no_results_and_safe_results_file_paths() {
     std::error_code ec;
     std::filesystem::remove(safeResultsPath, ec);
 
+    const std::filesystem::path fixtureRoot = repoRoot / "build" / "test_outputs" / "cli_fixture_data";
+    std::filesystem::remove_all(fixtureRoot, ec);
+    std::filesystem::create_directories(fixtureRoot, ec);
+
+    const std::filesystem::path singleCsvPath = fixtureRoot / "single.csv";
+    writeSyntheticCsv(singleCsvPath, /*rows=*/60, /*baseClose=*/100.0);
+
+    const std::filesystem::path multiDirPath = fixtureRoot / "multi";
+    std::filesystem::create_directories(multiDirPath, ec);
+    writeSyntheticCsv(multiDirPath / "aaa.csv", /*rows=*/60, /*baseClose=*/120.0);
+    writeSyntheticCsv(multiDirPath / "zzz.csv", /*rows=*/60, /*baseClose=*/160.0);
+    writeSyntheticCsv(multiDirPath / "too_short.csv", /*rows=*/20, /*baseClose=*/200.0);
+    {
+        std::ofstream malformed(multiDirPath / "malformed.csv");
+        malformed << "Date,Open,High,Low,Close,Adj Close,Volume\n";
+        malformed << "bad,row,that,should,fail,parsing,text\n";
+    }
+
     const std::string runNoResults =
         "cd \"" + repoRoot.string() + "\" && \"" + stockBotPath.string() +
         "\" --epochs 1 --seed 0 --early-stop-patience 1 --no-results";
@@ -106,6 +164,14 @@ void test_cli_no_results_and_safe_results_file_paths() {
     const int noResultsExit = runCommand(runNoResults);
     expectTrue(noResultsExit == 0,
                "stock_bot should exit with status 0 for minimal run with --no-results");
+
+    const std::string runDataPathSingle =
+        "cd \"" + repoRoot.string() + "\" && \"" + stockBotPath.string() +
+        "\" --epochs 1 --seed 0 --early-stop-patience 1 --data-path \"" +
+        singleCsvPath.string() + "\" --feature-count 13 --no-results";
+    const int dataPathSingleExit = runCommand(runDataPathSingle);
+    expectTrue(dataPathSingleExit == 0,
+               "stock_bot should accept --data-path for a single synthetic CSV");
 
     const std::string runFeature6 =
         "cd \"" + repoRoot.string() + "\" && \"" + stockBotPath.string() +
@@ -133,13 +199,14 @@ void test_cli_no_results_and_safe_results_file_paths() {
     const std::filesystem::path ablationReportPath = repoRoot / "build" / "test_outputs" / "feature_ablation_smoke.csv";
     std::filesystem::remove(ablationReportPath, ec);
 
-    const std::string runAblation =
+    const std::string runAblationDir =
         "cd \"" + repoRoot.string() + "\" && \"" + stockBotPath.string() +
-        "\" --epochs 1 --seed 0 --early-stop-patience 1 --feature-ablation --ablation-report \"" +
+        "\" --epochs 1 --seed 0 --early-stop-patience 1 --feature-ablation --data-dir \"" +
+        multiDirPath.string() + "\" --ablation-report \"" +
         ablationReportPath.string() + "\" --no-results";
-    const int ablationExit = runCommand(runAblation);
-    expectTrue(ablationExit == 0,
-               "stock_bot should run deterministic 6-vs-13 feature ablation mode");
+    const int ablationDirExit = runCommand(runAblationDir);
+    expectTrue(ablationDirExit == 0,
+               "stock_bot should run deterministic multi-ticker 6-vs-13 ablation mode");
 
     expectTrue(std::filesystem::exists(safeResultsPath),
                "stock_bot should create build-local results file when --results-file is used");
@@ -158,15 +225,19 @@ void test_cli_no_results_and_safe_results_file_paths() {
                "ablation report should include a header");
     expectTrue(
         ablationHeader ==
-            "feature_count,fold,best_val_loss,epoch_of_best_val_loss,total_epochs,model_sharpe_net,avg_turnover,strategy,strategy_sharpe_net,strategy_avg_turnover,strategy_cumulative_net_return,strategy_num_observations",
+            "ticker,csv_path,feature_count,fold,best_val_loss,epoch_of_best_val_loss,total_epochs,model_sharpe_net,avg_turnover,benchmark_strategy,benchmark_sharpe_net,benchmark_avg_turnover,benchmark_cumulative_net_return,benchmark_num_observations",
         "ablation report header should match stable schema");
 
     std::string firstDataLine;
     expectTrue(static_cast<bool>(std::getline(ablationIn, firstDataLine)),
                "ablation report should include at least one data line");
-    std::size_t commaCount = static_cast<std::size_t>(std::count(firstDataLine.begin(), firstDataLine.end(), ','));
-    expectTrue(commaCount == 11,
-               "ablation report data lines should contain 12 CSV columns");
+    std::vector<std::string> firstCols = splitCsv(firstDataLine);
+    expectTrue(firstCols.size() == 14,
+               "ablation report data lines should contain 14 CSV columns");
+    expectTrue(firstCols[0] == "aaa",
+               "data-dir CSV discovery should be deterministic and sorted by filename");
+    expectTrue(firstCols[1].find("aaa.csv") != std::string::npos,
+               "first ablation row should reference the sorted first csv path");
 
     const FileSnapshot afterTestsResults = snapshotFile(testsResultsPath);
     const FileSnapshot afterDataResults = snapshotFile(dataResultsPath);

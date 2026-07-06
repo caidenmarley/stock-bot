@@ -4,6 +4,7 @@
 #include "model/trainer.h"
 #include "search/hyperparam_search.h"
 #include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -16,10 +17,34 @@
 namespace {
 
 struct FoldRun {
+    std::string ticker;
+    std::string csvPath;
     int featureCount;
     int foldNumber;
     TrainingResult result;
 };
+
+struct RunSettings {
+    int hiddenSize;
+    int sequenceLength;
+    int batchSize;
+    double learningRate;
+    double delta;
+    size_t windowSize;
+    double maxNorm;
+    double decayFactor;
+    double minLR;
+    int lrDecayMaxTries;
+    int epochs;
+    double stoppingToleranceLoss;
+    int maxEpochsWithNoImprovement;
+    std::string trainerResultsPath;
+    std::optional<uint32_t> denseInitSeed;
+    std::optional<uint32_t> lstmInitSeed;
+};
+
+std::vector<int> defaultCutPoints(int rawSize, int sequenceLength);
+void printFeatureSummary(int featureCount, const std::vector<FoldRun>& foldRuns);
 
 static TrainingResult runFold(
     const std::vector<PriceData>& rawData,
@@ -72,13 +97,15 @@ void writeAblationReportCsv(const std::string& outputPath, const std::vector<Fol
         throw std::runtime_error("failed to open ablation report file: " + outputPath);
     }
 
-    csv << "feature_count,fold,best_val_loss,epoch_of_best_val_loss,total_epochs,model_sharpe_net,avg_turnover,"
-           "strategy,strategy_sharpe_net,strategy_avg_turnover,strategy_cumulative_net_return,strategy_num_observations\n";
+        csv << "ticker,csv_path,feature_count,fold,best_val_loss,epoch_of_best_val_loss,total_epochs,model_sharpe_net,avg_turnover,"
+            "benchmark_strategy,benchmark_sharpe_net,benchmark_avg_turnover,benchmark_cumulative_net_return,benchmark_num_observations\n";
 
     csv << std::fixed << std::setprecision(6);
     for (const FoldRun& run : runs) {
         if (run.result.finalValBenchmarkRows.empty()) {
-            csv << run.featureCount << ","
+            csv << run.ticker << ","
+                << run.csvPath << ","
+                << run.featureCount << ","
                 << run.foldNumber << ","
                 << run.result.bestValLoss << ","
                 << run.result.epochOfBestValLoss << ","
@@ -94,7 +121,9 @@ void writeAblationReportCsv(const std::string& outputPath, const std::vector<Fol
         }
 
         for (const auto& strategyRow : run.result.finalValBenchmarkRows) {
-            csv << run.featureCount << ","
+            csv << run.ticker << ","
+                << run.csvPath << ","
+                << run.featureCount << ","
                 << run.foldNumber << ","
                 << run.result.bestValLoss << ","
                 << run.result.epochOfBestValLoss << ","
@@ -108,6 +137,90 @@ void writeAblationReportCsv(const std::string& outputPath, const std::vector<Fol
                 << strategyRow.numObservations << "\n";
         }
     }
+}
+
+bool hasCsvExtension(const std::filesystem::path& path) {
+    std::string ext = path.extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return ext == ".csv";
+}
+
+std::vector<std::filesystem::path> discoverCsvFiles(const std::filesystem::path& dataDirPath) {
+    std::vector<std::filesystem::path> csvFiles;
+    for (const auto& entry : std::filesystem::directory_iterator(dataDirPath)) {
+        if (!entry.is_regular_file()) {
+            continue;
+        }
+        if (hasCsvExtension(entry.path())) {
+            csvFiles.push_back(entry.path());
+        }
+    }
+
+    std::sort(csvFiles.begin(), csvFiles.end(), [](const std::filesystem::path& a, const std::filesystem::path& b) {
+        const std::string aName = a.filename().string();
+        const std::string bName = b.filename().string();
+        if (aName == bName) {
+            return a.string() < b.string();
+        }
+        return aName < bName;
+    });
+
+    return csvFiles;
+}
+
+std::string tickerFromPath(const std::filesystem::path& csvPath) {
+    return csvPath.stem().string();
+}
+
+std::vector<FoldRun> runForFeatureCountOnDataset(
+    const std::vector<PriceData>& rawData,
+    const std::string& ticker,
+    const std::string& csvPath,
+    int featureCount,
+    const RunSettings& settings
+) {
+    const std::vector<int> cutPoints = defaultCutPoints(static_cast<int>(rawData.size()), settings.sequenceLength);
+
+    std::vector<FoldRun> foldRuns;
+    foldRuns.reserve(cutPoints.size());
+
+    for (size_t i = 0; i < cutPoints.size(); ++i) {
+        const int splitStart = cutPoints[i];
+        const int foldNumber = static_cast<int>(i) + 1;
+
+        std::cout << "[DATA " << ticker << "][FOLD " << foldNumber << "][features=" << featureCount << "] train=[0,"
+                  << splitStart << "] val=[" << splitStart << "," << rawData.size() << "]"
+                  << std::endl;
+
+        TrainingResult result = runFold(
+            rawData,
+            splitStart,
+            featureCount,
+            settings.hiddenSize,
+            settings.sequenceLength,
+            settings.batchSize,
+            settings.learningRate,
+            settings.delta,
+            settings.windowSize,
+            settings.maxNorm,
+            settings.decayFactor,
+            settings.minLR,
+            settings.lrDecayMaxTries,
+            settings.epochs,
+            settings.stoppingToleranceLoss,
+            settings.maxEpochsWithNoImprovement,
+            settings.trainerResultsPath,
+            settings.denseInitSeed,
+            settings.lstmInitSeed
+        );
+
+        foldRuns.push_back({ticker, csvPath, featureCount, foldNumber, std::move(result)});
+    }
+
+    printFeatureSummary(featureCount, foldRuns);
+    return foldRuns;
 }
 
 std::vector<int> defaultCutPoints(int rawSize, int sequenceLength) {
@@ -162,6 +275,9 @@ int main(int argc, char* argv[]) {
 
         bool runFeatureAblation = false;
         std::string ablationReportPath;
+
+        std::string dataPath;
+        std::string dataDir;
 
         auto requireValue = [&](int idx, const std::string& opt) {
             if (idx + 1 >= argc) {
@@ -249,6 +365,18 @@ int main(int argc, char* argv[]) {
                     throw std::invalid_argument("--ablation-report requires a non-empty path");
                 }
                 runFeatureAblation = true;
+            } else if (arg == "--data-path") {
+                requireValue(i, arg);
+                dataPath = argv[++i];
+                if (dataPath.empty()) {
+                    throw std::invalid_argument("--data-path requires a non-empty path");
+                }
+            } else if (arg == "--data-dir") {
+                requireValue(i, arg);
+                dataDir = argv[++i];
+                if (dataDir.empty()) {
+                    throw std::invalid_argument("--data-dir requires a non-empty path");
+                }
             } else if (arg == "--test") {
             } else if (arg == "--help") {
                 std::cout
@@ -261,6 +389,8 @@ int main(int argc, char* argv[]) {
                     << "  --feature-count N              Use N features (supports 6 or " << stock_features::kFeatureCount << ")\n"
                     << "  --feature-ablation             Run 6-feature vs " << stock_features::kFeatureCount << "-feature comparison\n"
                     << "  --ablation-report PATH         Write ablation CSV report to PATH\n"
+                    << "  --data-path PATH               Run training/eval on one CSV file\n"
+                    << "  --data-dir DIR                 Run training/eval across all .csv files in DIR\n"
                     << "  --results-file PATH            Write trainer metrics CSV to PATH\n"
                     << "  --no-results                   Disable trainer CSV output\n"
                     << "  --test                         Run hyperparameter search\n";
@@ -275,79 +405,113 @@ int main(int argc, char* argv[]) {
                                         + std::to_string(stock_features::kFeatureCount));
         }
 
+        if (!dataPath.empty() && !dataDir.empty()) {
+            throw std::invalid_argument("--data-path and --data-dir are mutually exclusive");
+        }
+
+        if (!dataPath.empty()) {
+            const std::filesystem::path inputPath(dataPath);
+            if (!std::filesystem::exists(inputPath)) {
+                throw std::invalid_argument("--data-path does not exist: " + dataPath);
+            }
+            if (!std::filesystem::is_regular_file(inputPath)) {
+                throw std::invalid_argument("--data-path must be a file: " + dataPath);
+            }
+        }
+
+        if (!dataDir.empty()) {
+            const std::filesystem::path inputDir(dataDir);
+            if (!std::filesystem::exists(inputDir)) {
+                throw std::invalid_argument("--data-dir does not exist: " + dataDir);
+            }
+            if (!std::filesystem::is_directory(inputDir)) {
+                throw std::invalid_argument("--data-dir must be a directory: " + dataDir);
+            }
+        }
+
         const std::optional<uint32_t> denseInitSeed =
             givenSeed ? std::optional<uint32_t>(static_cast<uint32_t>(seed)) : std::nullopt;
         const std::optional<uint32_t> lstmInitSeed =
             givenSeed ? std::optional<uint32_t>(static_cast<uint32_t>(seed)) : std::nullopt;
 
         const std::string activeTrainerResultsPath = enableTrainerResults ? trainerResultsPath : "";
-
-        const std::string csvPath = "data/AAAU.csv";
-        CSVLoader loader(csvPath);
-        const std::vector<PriceData>& rawData = loader.getData();
-        std::cout << "parsed " << rawData.size() << " rows from CSV" << std::endl;
-
-        const std::vector<int> cutPoints = defaultCutPoints(static_cast<int>(rawData.size()), sequenceLength);
-
-        auto runForFeatureCount = [&](int featureCount) {
-            std::vector<FoldRun> foldRuns;
-            foldRuns.reserve(cutPoints.size());
-
-            for (size_t i = 0; i < cutPoints.size(); ++i) {
-                const int splitStart = cutPoints[i];
-                const int foldNumber = static_cast<int>(i) + 1;
-                std::cout << "[FOLD " << foldNumber << "][features=" << featureCount << "] train=[0,"
-                          << splitStart << "] val=[" << splitStart << "," << rawData.size() << "]"
-                          << std::endl;
-
-                TrainingResult result = runFold(
-                    rawData,
-                    splitStart,
-                    featureCount,
-                    hiddenSize,
-                    sequenceLength,
-                    batchSize,
-                    learningRate,
-                    delta,
-                    windowSize,
-                    maxNorm,
-                    decayFactor,
-                    minLR,
-                    lrDecayMaxTries,
-                    epochs,
-                    stoppingToleranceLoss,
-                    maxEpochsWithNoImprovement,
-                    activeTrainerResultsPath,
-                    denseInitSeed,
-                    lstmInitSeed
-                );
-
-                foldRuns.push_back({featureCount, foldNumber, std::move(result)});
-            }
-
-            printFeatureSummary(featureCount, foldRuns);
-            return foldRuns;
+        const RunSettings settings{
+            hiddenSize,
+            sequenceLength,
+            batchSize,
+            learningRate,
+            delta,
+            windowSize,
+            maxNorm,
+            decayFactor,
+            minLR,
+            lrDecayMaxTries,
+            epochs,
+            stoppingToleranceLoss,
+            maxEpochsWithNoImprovement,
+            activeTrainerResultsPath,
+            denseInitSeed,
+            lstmInitSeed,
         };
 
+        std::vector<std::filesystem::path> datasets;
+        if (!dataDir.empty()) {
+            datasets = discoverCsvFiles(std::filesystem::path(dataDir));
+            if (datasets.empty()) {
+                throw std::runtime_error("No CSV files found in data directory: " + dataDir);
+            }
+            std::cout << "[DATA] discovered " << datasets.size() << " csv files in " << dataDir << std::endl;
+        } else if (!dataPath.empty()) {
+            datasets.push_back(std::filesystem::path(dataPath));
+        } else {
+            datasets.push_back(std::filesystem::path("data/AAAU.csv"));
+        }
+
+        std::vector<FoldRun> allRuns;
+
+        const bool robustDirectoryMode = !dataDir.empty();
+        for (const std::filesystem::path& datasetPath : datasets) {
+            const std::string csvPath = datasetPath.string();
+            const std::string ticker = tickerFromPath(datasetPath);
+
+            try {
+                CSVLoader loader(csvPath);
+                const std::vector<PriceData>& rawData = loader.getData();
+                std::cout << "[DATA " << ticker << "] parsed " << rawData.size() << " rows from CSV" << std::endl;
+
+                if (!runFeatureAblation) {
+                    std::vector<FoldRun> runs = runForFeatureCountOnDataset(rawData, ticker, csvPath, numFeatures, settings);
+                    allRuns.insert(allRuns.end(), runs.begin(), runs.end());
+                    continue;
+                }
+
+                const int baselineFeatures = 6;
+                const int engineeredFeatures = stock_features::kFeatureCount;
+
+                std::vector<FoldRun> baselineRuns = runForFeatureCountOnDataset(rawData, ticker, csvPath, baselineFeatures, settings);
+                std::vector<FoldRun> engineeredRuns = runForFeatureCountOnDataset(rawData, ticker, csvPath, engineeredFeatures, settings);
+
+                allRuns.insert(allRuns.end(), baselineRuns.begin(), baselineRuns.end());
+                allRuns.insert(allRuns.end(), engineeredRuns.begin(), engineeredRuns.end());
+            } catch (const std::exception& ex) {
+                if (robustDirectoryMode) {
+                    std::cerr << "[WARN] skipping dataset " << csvPath << ": " << ex.what() << std::endl;
+                    continue;
+                }
+                throw;
+            }
+        }
+
+        if (allRuns.empty()) {
+            throw std::runtime_error("No successful dataset runs were produced");
+        }
+
         if (!runFeatureAblation) {
-            runForFeatureCount(numFeatures);
             return 0;
         }
 
-        const int baselineFeatures = 6;
-        const int engineeredFeatures = stock_features::kFeatureCount;
-
-        std::vector<FoldRun> allRuns;
-        allRuns.reserve(cutPoints.size() * 2);
-
-        std::vector<FoldRun> baselineRuns = runForFeatureCount(baselineFeatures);
-        std::vector<FoldRun> engineeredRuns = runForFeatureCount(engineeredFeatures);
-
-        allRuns.insert(allRuns.end(), baselineRuns.begin(), baselineRuns.end());
-        allRuns.insert(allRuns.end(), engineeredRuns.begin(), engineeredRuns.end());
-
         if (ablationReportPath.empty()) {
-            ablationReportPath = "build/results/feature_ablation_v1.csv";
+            ablationReportPath = "build/results/multi_ticker_feature_ablation.csv";
         }
 
         writeAblationReportCsv(ablationReportPath, allRuns);

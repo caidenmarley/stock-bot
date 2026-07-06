@@ -255,3 +255,33 @@ Ablation report schema:
 
 Guardrail retained:
 - this is an evaluation/experiment path only; no architecture change beyond selectable input feature count
+
+## MI-4 Multi-Ticker Feature Ablation
+
+The ablation path now supports one-file and directory-level evaluation:
+- `--data-path PATH` runs a single CSV file
+- `--data-dir DIR` runs all `.csv` files in a directory (deterministic filename order)
+
+This works with:
+- `--feature-count 6`
+- `--feature-count 13`
+- `--feature-ablation` + `--ablation-report PATH`
+
+Multi-ticker report rows include:
+- ticker/file stem
+- csv path
+- feature count
+- fold
+- best validation loss diagnostics
+- model sharpe/turnover diagnostics
+- benchmark strategy rows and benchmark diagnostics
+
+Robust directory behavior:
+- malformed or too-short CSV files are skipped with warnings
+- remaining valid files continue to run
+
+Design guardrails retained:
+- target construction unchanged
+- validation split policy unchanged
+- no architecture changes beyond selectable input feature count
+- no new engineered features
