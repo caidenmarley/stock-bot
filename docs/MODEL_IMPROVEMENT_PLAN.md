@@ -285,3 +285,23 @@ Design guardrails retained:
 - validation split policy unchanged
 - no architecture changes beyond selectable input feature count
 - no new engineered features
+
+## MI-5 Deterministic Multi-Ticker Batching Controls
+
+To keep multi-file ablation runs credit-efficient while preserving deterministic selection, directory-mode batching controls are now available:
+- `--file-offset N` skips the first `N` files after deterministic filename sorting
+- `--max-files N` limits processing to at most `N` files after offset
+
+Scope and constraints:
+- applies only to `--data-dir` mode
+- if neither flag is provided, behavior is unchanged (all discovered sorted `.csv` files are used)
+- `--file-offset` must be `>= 0`
+- `--max-files` must be `> 0`
+- if offset excludes all discovered files, run fails with a clear no-files-selected error
+
+Design guardrails retained:
+- training loop behavior unchanged
+- feature engineering unchanged
+- target construction unchanged
+- validation split policy unchanged
+- benchmark and trading diagnostic calculations unchanged

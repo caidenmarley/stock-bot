@@ -4,6 +4,7 @@
 #include <functional>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -126,6 +127,31 @@ std::vector<std::string> splitCsv(const std::string& line) {
     return cols;
 }
 
+std::set<std::string> readUniqueTickersFromAblationReport(const std::filesystem::path& reportPath) {
+    std::ifstream in(reportPath);
+    if (!in) {
+        throw std::runtime_error("failed to read ablation report: " + reportPath.string());
+    }
+
+    std::string header;
+    if (!std::getline(in, header)) {
+        throw std::runtime_error("ablation report missing header: " + reportPath.string());
+    }
+
+    std::set<std::string> tickers;
+    std::string line;
+    while (std::getline(in, line)) {
+        if (line.empty()) {
+            continue;
+        }
+        const std::vector<std::string> cols = splitCsv(line);
+        if (!cols.empty()) {
+            tickers.insert(cols[0]);
+        }
+    }
+    return tickers;
+}
+
 void test_cli_no_results_and_safe_results_file_paths() {
     const std::filesystem::path repoRoot = findRepoRoot();
     const std::filesystem::path stockBotPath = findStockBotExecutable(repoRoot);
@@ -156,6 +182,13 @@ void test_cli_no_results_and_safe_results_file_paths() {
         malformed << "Date,Open,High,Low,Close,Adj Close,Volume\n";
         malformed << "bad,row,that,should,fail,parsing,text\n";
     }
+
+    const std::filesystem::path batchingDirPath = fixtureRoot / "batching";
+    std::filesystem::create_directories(batchingDirPath, ec);
+    writeSyntheticCsv(batchingDirPath / "aaa.csv", /*rows=*/60, /*baseClose=*/101.0);
+    writeSyntheticCsv(batchingDirPath / "bbb.csv", /*rows=*/60, /*baseClose=*/102.0);
+    writeSyntheticCsv(batchingDirPath / "ccc.csv", /*rows=*/60, /*baseClose=*/103.0);
+    writeSyntheticCsv(batchingDirPath / "ddd.csv", /*rows=*/60, /*baseClose=*/104.0);
 
     const std::string runNoResults =
         "cd \"" + repoRoot.string() + "\" && \"" + stockBotPath.string() +
@@ -238,6 +271,51 @@ void test_cli_no_results_and_safe_results_file_paths() {
                "data-dir CSV discovery should be deterministic and sorted by filename");
     expectTrue(firstCols[1].find("aaa.csv") != std::string::npos,
                "first ablation row should reference the sorted first csv path");
+
+    const std::filesystem::path maxFilesReportPath = repoRoot / "build" / "test_outputs" / "feature_ablation_max_files.csv";
+    std::filesystem::remove(maxFilesReportPath, ec);
+    const std::string runAblationMaxFiles =
+        "cd \"" + repoRoot.string() + "\" && \"" + stockBotPath.string() +
+        "\" --epochs 1 --seed 0 --early-stop-patience 1 --feature-ablation --data-dir \"" +
+        batchingDirPath.string() + "\" --max-files 2 --ablation-report \"" +
+        maxFilesReportPath.string() + "\" --no-results";
+    const int ablationMaxFilesExit = runCommand(runAblationMaxFiles);
+    expectTrue(ablationMaxFilesExit == 0,
+               "stock_bot should support deterministic --max-files batching in data-dir mode");
+
+    const std::set<std::string> maxFilesTickers = readUniqueTickersFromAblationReport(maxFilesReportPath);
+    expectTrue(maxFilesTickers == std::set<std::string>({"aaa", "bbb"}),
+               "--max-files 2 should process only first two sorted files");
+
+    const std::filesystem::path fileOffsetReportPath = repoRoot / "build" / "test_outputs" / "feature_ablation_file_offset.csv";
+    std::filesystem::remove(fileOffsetReportPath, ec);
+    const std::string runAblationFileOffset =
+        "cd \"" + repoRoot.string() + "\" && \"" + stockBotPath.string() +
+        "\" --epochs 1 --seed 0 --early-stop-patience 1 --feature-ablation --data-dir \"" +
+        batchingDirPath.string() + "\" --file-offset 1 --max-files 1 --ablation-report \"" +
+        fileOffsetReportPath.string() + "\" --no-results";
+    const int ablationFileOffsetExit = runCommand(runAblationFileOffset);
+    expectTrue(ablationFileOffsetExit == 0,
+               "stock_bot should support deterministic --file-offset batching in data-dir mode");
+
+    const std::set<std::string> fileOffsetTickers = readUniqueTickersFromAblationReport(fileOffsetReportPath);
+    expectTrue(fileOffsetTickers == std::set<std::string>({"bbb"}),
+               "--file-offset 1 should start from the second sorted file");
+
+    const std::filesystem::path offsetAndMaxReportPath = repoRoot / "build" / "test_outputs" / "feature_ablation_offset_and_max.csv";
+    std::filesystem::remove(offsetAndMaxReportPath, ec);
+    const std::string runAblationOffsetAndMax =
+        "cd \"" + repoRoot.string() + "\" && \"" + stockBotPath.string() +
+        "\" --epochs 1 --seed 0 --early-stop-patience 1 --feature-ablation --data-dir \"" +
+        batchingDirPath.string() + "\" --file-offset 1 --max-files 2 --ablation-report \"" +
+        offsetAndMaxReportPath.string() + "\" --no-results";
+    const int ablationOffsetAndMaxExit = runCommand(runAblationOffsetAndMax);
+    expectTrue(ablationOffsetAndMaxExit == 0,
+               "stock_bot should support combined --file-offset and --max-files in data-dir mode");
+
+    const std::set<std::string> offsetAndMaxTickers = readUniqueTickersFromAblationReport(offsetAndMaxReportPath);
+    expectTrue(offsetAndMaxTickers == std::set<std::string>({"bbb", "ccc"}),
+               "--file-offset 1 --max-files 2 should process deterministic middle batch");
 
     const FileSnapshot afterTestsResults = snapshotFile(testsResultsPath);
     const FileSnapshot afterDataResults = snapshotFile(dataResultsPath);

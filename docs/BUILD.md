@@ -100,6 +100,10 @@ cd /home/caidenmarley/stock-bot
 ./build/stock_bot --data-dir data --epochs 1 --seed 0 --early-stop-patience 1 --feature-count 13 --no-results
 ./build/stock_bot --feature-ablation --data-dir data --ablation-report build/results/multi_ticker_feature_ablation.csv --epochs 1 --seed 0 --early-stop-patience 1 --no-results
 
+# deterministic data-dir batching controls (apply after filename sorting)
+./build/stock_bot --feature-ablation --data-dir data --file-offset 0 --max-files 5 --ablation-report build/results/ablation_batch_01.csv --epochs 1 --seed 0 --early-stop-patience 1 --no-results
+./build/stock_bot --feature-ablation --data-dir data --file-offset 5 --max-files 5 --ablation-report build/results/ablation_batch_02.csv --epochs 1 --seed 0 --early-stop-patience 1 --no-results
+
 # invalid flags/values should fail non-zero
 ./build/stock_bot --definitely-invalid-option
 ```
@@ -136,3 +140,7 @@ Use build-local paths (for example under `build/results/` or `build/test_outputs
 
 For `--data-dir` runs, CSV files are discovered deterministically (sorted by filename).
 If a file is malformed or too short for the configured sequence/fold setup, the run prints a warning and continues with the remaining files.
+For `--data-dir` runs, optional batching controls are available:
+- `--file-offset N` skips the first N sorted files (N must be >= 0)
+- `--max-files N` processes at most N sorted files after offset (N must be > 0)
+- These flags are valid only when `--data-dir` is provided.

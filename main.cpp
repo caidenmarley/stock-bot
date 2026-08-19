@@ -278,6 +278,8 @@ int main(int argc, char* argv[]) {
 
         std::string dataPath;
         std::string dataDir;
+        std::optional<int> maxFiles;
+        std::optional<int> fileOffset;
 
         auto requireValue = [&](int idx, const std::string& opt) {
             if (idx + 1 >= argc) {
@@ -377,6 +379,20 @@ int main(int argc, char* argv[]) {
                 if (dataDir.empty()) {
                     throw std::invalid_argument("--data-dir requires a non-empty path");
                 }
+            } else if (arg == "--max-files") {
+                requireValue(i, arg);
+                const int parsedMaxFiles = parseIntArg(argv[++i], arg);
+                if (parsedMaxFiles <= 0) {
+                    throw std::invalid_argument("--max-files must be > 0");
+                }
+                maxFiles = parsedMaxFiles;
+            } else if (arg == "--file-offset") {
+                requireValue(i, arg);
+                const int parsedFileOffset = parseIntArg(argv[++i], arg);
+                if (parsedFileOffset < 0) {
+                    throw std::invalid_argument("--file-offset must be >= 0");
+                }
+                fileOffset = parsedFileOffset;
             } else if (arg == "--test") {
             } else if (arg == "--help") {
                 std::cout
@@ -391,6 +407,8 @@ int main(int argc, char* argv[]) {
                     << "  --ablation-report PATH         Write ablation CSV report to PATH\n"
                     << "  --data-path PATH               Run training/eval on one CSV file\n"
                     << "  --data-dir DIR                 Run training/eval across all .csv files in DIR\n"
+                    << "  --max-files N                  Process at most N sorted CSV files (data-dir mode only)\n"
+                    << "  --file-offset N                Skip first N sorted CSV files (data-dir mode only)\n"
                     << "  --results-file PATH            Write trainer metrics CSV to PATH\n"
                     << "  --no-results                   Disable trainer CSV output\n"
                     << "  --test                         Run hyperparameter search\n";
@@ -407,6 +425,10 @@ int main(int argc, char* argv[]) {
 
         if (!dataPath.empty() && !dataDir.empty()) {
             throw std::invalid_argument("--data-path and --data-dir are mutually exclusive");
+        }
+
+        if ((maxFiles.has_value() || fileOffset.has_value()) && dataDir.empty()) {
+            throw std::invalid_argument("--max-files and --file-offset require --data-dir");
         }
 
         if (!dataPath.empty()) {
@@ -456,11 +478,38 @@ int main(int argc, char* argv[]) {
 
         std::vector<std::filesystem::path> datasets;
         if (!dataDir.empty()) {
-            datasets = discoverCsvFiles(std::filesystem::path(dataDir));
+            const std::vector<std::filesystem::path> discovered = discoverCsvFiles(std::filesystem::path(dataDir));
+            datasets = discovered;
             if (datasets.empty()) {
                 throw std::runtime_error("No CSV files found in data directory: " + dataDir);
             }
-            std::cout << "[DATA] discovered " << datasets.size() << " csv files in " << dataDir << std::endl;
+
+            const size_t selectedOffset = static_cast<size_t>(fileOffset.value_or(0));
+            if (selectedOffset >= datasets.size()) {
+                throw std::runtime_error(
+                    "No CSV files selected after applying --file-offset=" + std::to_string(selectedOffset)
+                    + " to " + std::to_string(datasets.size()) + " discovered file(s)"
+                );
+            }
+
+            const size_t selectedMaxFiles = maxFiles.has_value()
+                ? static_cast<size_t>(*maxFiles)
+                : (datasets.size() - selectedOffset);
+            const size_t selectedCount = std::min(selectedMaxFiles, datasets.size() - selectedOffset);
+
+            datasets = std::vector<std::filesystem::path>(
+                datasets.begin() + static_cast<std::ptrdiff_t>(selectedOffset),
+                datasets.begin() + static_cast<std::ptrdiff_t>(selectedOffset + selectedCount)
+            );
+
+            if (datasets.empty()) {
+                throw std::runtime_error("No CSV files selected after applying --file-offset/--max-files");
+            }
+
+            std::cout << "[DATA] discovered " << discovered.size() << " csv files in " << dataDir
+                      << " | selected " << datasets.size() << " (offset=" << selectedOffset
+                      << ", max-files=" << (maxFiles.has_value() ? std::to_string(*maxFiles) : std::string("all"))
+                      << ")" << std::endl;
         } else if (!dataPath.empty()) {
             datasets.push_back(std::filesystem::path(dataPath));
         } else {
